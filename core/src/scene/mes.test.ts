@@ -17,8 +17,10 @@ class Player extends Unit2D {
 }
 
 class Sword extends Unit2D {
+  readonly damage: number;
   constructor(props: Unit2DProps & { damage: number }) {
     super(props);
+    this.damage = props.damage;
   }
 }
 

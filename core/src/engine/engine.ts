@@ -110,7 +110,10 @@ export class Engine {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    if (this.rafId !== null && typeof globalThis.cancelAnimationFrame === "function") {
+    if (
+      this.rafId !== null &&
+      typeof globalThis.cancelAnimationFrame === "function"
+    ) {
       globalThis.cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
@@ -144,7 +147,8 @@ export class Engine {
   private walk(fn: (unit: Unit, dt: number) => void, dt: number): void {
     const visit = (u: Unit): void => {
       fn(u, dt);
-      for (const c of [...u.children]) visit(c);
+      // snapshot: a tick may add/remove children mid-walk
+      for (const c of u.children.slice()) visit(c);
     };
     visit(this.root);
   }

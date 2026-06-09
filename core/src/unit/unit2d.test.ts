@@ -19,7 +19,10 @@ describe("Unit2D transform", () => {
   });
 
   it("applies parent rotation to child offset", () => {
-    const parent = new Unit2D({ position: new Vector(10, 0), rotation: Math.PI / 2 });
+    const parent = new Unit2D({
+      position: new Vector(10, 0),
+      rotation: Math.PI / 2,
+    });
     const child = new Unit2D({ position: new Vector(5, 0) });
     parent.addChild(child);
     const w = child.worldTransform.position;

@@ -122,7 +122,7 @@ export class Unit {
   destroy(): void {
     if (this._destroyed) return;
 
-    for (const c of [...this._children]) c.destroy();
+    for (const c of this._children.slice()) c.destroy();
 
     if (this._parent) {
       this._parent.removeChild(this); // fires onTreeExit while still linked

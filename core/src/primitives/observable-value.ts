@@ -20,7 +20,7 @@ export class ObservableValue<T> {
   set(value: T): void {
     if (value === this.value) return;
     this.value = value;
-    for (const cb of [...this.listeners]) cb(value);
+    for (const cb of Array.from(this.listeners)) cb(value);
   }
 
   /** Register a listener. Returns an unsubscribe function. */

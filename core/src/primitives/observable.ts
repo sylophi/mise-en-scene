@@ -20,7 +20,7 @@ export class Observable<T = void> {
   /** Notify all listeners with `payload`. */
   fire(payload: T): void {
     // Iterate a snapshot so listeners may add/remove during dispatch.
-    for (const cb of [...this.listeners]) cb(payload);
+    for (const cb of Array.from(this.listeners)) cb(payload);
   }
 
   /** Number of active listeners. */

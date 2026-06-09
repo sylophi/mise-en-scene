@@ -74,7 +74,10 @@ export class Input {
 
   feedPointerDown(button: number, position?: Vector): void {
     this.buttons.add(button);
-    this.onPointerDown.fire({ position: position ?? this.pointer.get(), button });
+    this.onPointerDown.fire({
+      position: position ?? this.pointer.get(),
+      button,
+    });
   }
 
   feedPointerUp(button: number, position?: Vector): void {

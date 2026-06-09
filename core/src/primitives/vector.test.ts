@@ -9,13 +9,19 @@ describe("Vector", () => {
   });
 
   it("add / sub", () => {
-    expect(new Vector(1, 2).add(new Vector(3, 4)).equals(new Vector(4, 6))).toBe(true);
-    expect(new Vector(5, 5).sub(new Vector(1, 2)).equals(new Vector(4, 3))).toBe(true);
+    expect(
+      new Vector(1, 2).add(new Vector(3, 4)).equals(new Vector(4, 6)),
+    ).toBe(true);
+    expect(
+      new Vector(5, 5).sub(new Vector(1, 2)).equals(new Vector(4, 3)),
+    ).toBe(true);
   });
 
   it("scale (scalar) and mul (component-wise)", () => {
     expect(new Vector(2, 3).scale(2).equals(new Vector(4, 6))).toBe(true);
-    expect(new Vector(2, 3).mul(new Vector(4, 5)).equals(new Vector(8, 15))).toBe(true);
+    expect(
+      new Vector(2, 3).mul(new Vector(4, 5)).equals(new Vector(8, 15)),
+    ).toBe(true);
   });
 
   it("rotate by 90 degrees", () => {

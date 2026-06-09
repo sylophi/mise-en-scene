@@ -10,10 +10,15 @@ export interface Transform {
 }
 
 /** Compose a parent world transform with a child's local transform. */
-export function composeTransform(parent: Transform, local: Transform): Transform {
+export function composeTransform(
+  parent: Transform,
+  local: Transform,
+): Transform {
   return {
     // child local point: scale, then rotate, then translate into the parent frame
-    position: parent.position.add(local.position.mul(parent.scale).rotate(parent.rotation)),
+    position: parent.position.add(
+      local.position.mul(parent.scale).rotate(parent.rotation),
+    ),
     rotation: parent.rotation + local.rotation,
     scale: parent.scale.mul(local.scale),
   };

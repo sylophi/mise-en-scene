@@ -1,9 +1,3 @@
 packages:
   - core
   - react
-
-# Use rolldown-vite instead of vite so the toolchain depends on rolldown (a single
-# Rust binary) rather than rollup, whose registry metadata lacks the "time" field
-# the global minimumReleaseAge gate requires.
-overrides:
-  vite: npm:rolldown-vite@latest
