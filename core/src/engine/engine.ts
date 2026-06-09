@@ -10,6 +10,11 @@ export interface EngineOptions {
   fixedStep?: number;
   /** Max fixed steps run in one catch-up, to avoid the spiral of death. Default 5. */
   maxCatchUp?: number;
+  /**
+   * Max device-tick `dt` in seconds. Longer real gaps (e.g. resuming a hidden
+   * tab, where rAF was paused) are clamped to this. Default 0.1.
+   */
+  maxDeviceDt?: number;
   /** Start the loops on construction. Default true. */
   autoStart?: boolean;
 }
@@ -38,6 +43,7 @@ export class Engine {
 
   readonly fixedStep: number;
   readonly maxCatchUp: number;
+  readonly maxDeviceDt: number;
 
   private accumulator = 0;
   private _time = 0;
@@ -51,6 +57,7 @@ export class Engine {
   constructor(options: EngineOptions = {}) {
     this.fixedStep = options.fixedStep ?? 1 / 60;
     this.maxCatchUp = options.maxCatchUp ?? 5;
+    this.maxDeviceDt = options.maxDeviceDt ?? 0.1;
 
     this.root = new Root();
     this.root.setEngine(this);
@@ -72,12 +79,17 @@ export class Engine {
   /**
    * Swap the current scene under the root. By default the previous scene is
    * destroyed; pass `destroyPrevious: false` to detach it for reuse instead.
+   *
+   * Only manages scenes mounted through this method: units added directly under
+   * the root (persistent managers, cameras) are left alone, and a previous scene
+   * that was already detached or destroyed externally is not touched.
    */
   changeScene(unit: Unit, opts: { destroyPrevious?: boolean } = {}): void {
     const destroyPrevious = opts.destroyPrevious ?? true;
-    if (this.scene) {
-      if (destroyPrevious) this.scene.destroy();
-      else this.root.removeChild(this.scene);
+    const prev = this.scene;
+    if (prev && prev.parent === this.root) {
+      if (destroyPrevious) prev.destroy();
+      else this.root.removeChild(prev);
     }
     this.scene = unit;
     this.root.addChild(unit);
@@ -144,9 +156,12 @@ export class Engine {
     }
   }
 
-  /** Run one variable-step device tick over the tree. */
+  /**
+   * Run one variable-step device tick over the tree. `realDt` is clamped to
+   * `maxDeviceDt` so a long rAF gap (hidden tab) doesn't produce a giant step.
+   */
   advanceDevice(realDt: number): void {
-    this.walk((u, dt) => u.deviceTick(dt), realDt);
+    this.walk((u, dt) => u.deviceTick(dt), Math.min(realDt, this.maxDeviceDt));
   }
 
   /** Depth-first, top-down walk of the live tree. */

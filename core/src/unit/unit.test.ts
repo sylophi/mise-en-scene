@@ -41,6 +41,20 @@ describe("Unit tree", () => {
     expect(() => b.addChild(a)).toThrow();
   });
 
+  it("onParentChanged fires on attach, reparent, and detach", () => {
+    const log: string[] = [];
+    const a = new T("a", log);
+    const b = new T("b", log);
+    const c = new T("c", log);
+    const parents: (Unit | null)[] = [];
+    c.onParentChanged.addListener((p) => parents.push(p));
+    a.addChild(c);
+    a.addChild(c); // no-op: already the parent
+    b.addChild(c); // reparent
+    b.removeChild(c); // detach
+    expect(parents).toEqual([a, b, null]);
+  });
+
   it("removeChild detaches without destroying", () => {
     const log: string[] = [];
     const a = new T("a", log);

@@ -23,6 +23,13 @@ class Named extends Unit {
   }
 }
 
+class DeviceTicker extends Unit {
+  dt = 0;
+  override deviceTick(dt: number): void {
+    this.dt = dt;
+  }
+}
+
 describe("Engine fixed-step loop", () => {
   it("runs whole steps from the accumulator and advances time", () => {
     const e = new Engine({ autoStart: false, fixedStep: 0.1 });
@@ -61,16 +68,18 @@ describe("Engine fixed-step loop", () => {
 
   it("deviceTick passes the raw variable dt", () => {
     const e = new Engine({ autoStart: false });
-    class DeviceTicker extends Unit {
-      dt = 0;
-      override deviceTick(dt: number): void {
-        this.dt = dt;
-      }
-    }
     const d = new DeviceTicker();
     e.root.addChild(d);
     e.advanceDevice(0.016);
     expect(d.dt).toBeCloseTo(0.016);
+  });
+
+  it("clamps device dt to maxDeviceDt (hidden-tab resume spike)", () => {
+    const e = new Engine({ autoStart: false, maxDeviceDt: 0.1 });
+    const d = new DeviceTicker();
+    e.root.addChild(d);
+    e.advanceDevice(5); // tab was hidden for 5s; rAF resumes with a huge gap
+    expect(d.dt).toBeCloseTo(0.1);
   });
 });
 
@@ -94,5 +103,26 @@ describe("Engine.changeScene", () => {
     e.changeScene(sceneB, { destroyPrevious: false });
     expect(sceneA.destroyed).toBe(false);
     expect(sceneA.engine).toBeNull();
+  });
+
+  it("leaves units mounted directly under root alone", () => {
+    const e = new Engine({ autoStart: false });
+    const manager = new Unit(); // persistent manager/camera pattern
+    e.root.addChild(manager);
+    e.changeScene(new Unit());
+    const sceneB = new Unit();
+    e.changeScene(sceneB);
+    expect(manager.destroyed).toBe(false);
+    expect(e.root.children).toContain(manager);
+    expect(e.root.children).toContain(sceneB);
+  });
+
+  it("does not touch a previous scene that was detached externally", () => {
+    const e = new Engine({ autoStart: false });
+    const sceneA = new Unit();
+    e.changeScene(sceneA);
+    e.root.removeChild(sceneA); // user pulled it out for reuse
+    e.changeScene(new Unit());
+    expect(sceneA.destroyed).toBe(false);
   });
 });

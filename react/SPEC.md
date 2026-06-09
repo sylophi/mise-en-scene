@@ -140,9 +140,9 @@ The renderer **observes** the scale live; it never assumes one.
 
 - Attaches DOM listeners (keyboard on the document/stage, pointer on the stage) and calls
   the `Input` feed API (`feedKeyDown`, `feedPointerMove`, ...).
-- **Maps pointer pixels → camera coordinates** before feeding: invert `--u` and the
-  active camera's transform. Only the React side knows the canvas size + camera, so it
-  owns this mapping.
+- **Maps pointer pixels → world coordinates** before feeding: divide out `--u`, then
+  apply the active camera's world transform. Only the React side knows the canvas
+  size + camera, so it owns this mapping.
 - v1: keyboard + pointer only. No touch, no action mapping.
 
 ---

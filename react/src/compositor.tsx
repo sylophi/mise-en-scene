@@ -67,19 +67,32 @@ function useRenderables(engine: Engine): Renderable[] {
 /**
  * Recompute on read, re-rendering whenever this unit or any contiguous `Unit2D`
  * ancestor changes its transform (a parent move shifts the child's world pose).
+ * Reparenting anywhere in the chain rebuilds the subscriptions, so the hook
+ * tracks the unit's *current* ancestors, not the chain at mount time.
  */
 function useWorldTransform(unit: Unit2D): Transform {
   const [, bump] = useReducer((n: number) => n + 1, 0);
   useEffect(() => {
     const unsubs: Array<() => void> = [];
-    for (let u: Unit | null = unit; u instanceof Unit2D; u = u.parent) {
-      unsubs.push(u.position.addListener(bump));
-      unsubs.push(u.rotation.addListener(bump));
-      unsubs.push(u.scale.addListener(bump));
-    }
-    return () => {
+    const unsubscribeAll = (): void => {
       for (const f of unsubs) f();
+      unsubs.length = 0;
     };
+    const onChainChanged = (): void => {
+      unsubscribeAll();
+      subscribe();
+      bump();
+    };
+    const subscribe = (): void => {
+      for (let u: Unit | null = unit; u instanceof Unit2D; u = u.parent) {
+        unsubs.push(u.position.addListener(bump));
+        unsubs.push(u.rotation.addListener(bump));
+        unsubs.push(u.scale.addListener(bump));
+        unsubs.push(u.onParentChanged.addListener(onChainChanged));
+      }
+    };
+    subscribe();
+    return unsubscribeAll;
   }, [unit]);
   return unit.worldTransform;
 }
@@ -187,7 +200,7 @@ function Stage({
     return undefined;
   }, [camera, camW, camH]);
 
-  // Capture DOM input and feed the engine (pointer mapped to camera coords).
+  // Capture DOM input and feed the engine (pointer mapped to world coords).
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;

@@ -71,11 +71,18 @@ Ticks, has reactive state, lives in a tree. Invisible. (managers, spawners, time
 - `parent`, `children`
 - `addChild(child)` / `removeChild(child)` — detaches but does **not** destroy
 - Reparenting allowed (move via `addChild`)
+- `onParentChanged` — `Observable<Unit | null>`, fires after `parent` changes
+  (attach, reparent, detach) with the new parent. Same-engine reparenting fires
+  no tree enter/exit, so structural observers (e.g. a renderer following an
+  ancestor chain) listen here.
 - Everything hangs off the **`Root`** (see below); the `Root` is held by the `Engine`.
 
 **Engine binding**
-- A unit is bound to **exactly one engine**, permanently. It can **never** join a
-  different engine's tree.
+- A unit is bound to **at most one engine at a time**; binding mirrors liveness.
+  It is bound exactly while it is connected up to an engine-bound `Root`, and the
+  binding clears when it detaches. A *currently bound* subtree can never be
+  attached into a different engine's tree; a fully detached subtree may be
+  mounted anywhere, including a different engine.
 - Binding is **inherited from the parent** on `addChild` and propagates **down the
   whole subtree** being attached.
 - A detached subtree you're building is **engine-less** until its top joins an
@@ -159,13 +166,17 @@ Owns the root unit and drives the loops. Units stay pure; the engine drives them
   and leave (bottom-up) the live tree. Retained renderers use these to keep their
   view set in sync without re-crawling. A unit is fully detached before `onUnitExit`
   fires, so the tree already reflects the removal.
-- `changeScene(unit)` — destroys the current child under `Root` and mounts the new one
-  (sugar over `root` manipulation; a flag can detach-for-reuse instead of destroy).
+- `changeScene(unit)` — destroys the scene it previously mounted and mounts the new
+  one (a flag can detach-for-reuse instead of destroy). It only manages scenes
+  mounted through it: units added directly under `Root` (persistent managers,
+  cameras) are left alone, and a previous scene already detached or destroyed
+  externally is not touched.
 - **Fixed loop** (`tick`): `setInterval`-driven, default **60Hz** (configurable).
   Measures real elapsed time and corrects (runs catch-up steps when late). Catch-up
   is **capped** (~5 steps) to avoid the spiral of death; excess time is dropped.
 - **Device loop** (`deviceTick`): `requestAnimationFrame`-driven, variable `dt`,
-  device refresh rate. Auto-pauses on hidden tab.
+  device refresh rate. Auto-pauses on hidden tab; `dt` is clamped (default 0.1s,
+  configurable) so the first frame after a long pause doesn't take a giant step.
 
 ---
 
@@ -182,13 +193,14 @@ Event payloads (`KeyEvent`, `PointerEvent`) are **neutral `core` types**, not DO
 
 **Polling** (query inside `tick`):
 - `isDown(key)` → boolean
-- `pointer` — `ObservableValue<Vector>`, in **camera coordinates**
+- `pointer` — `ObservableValue<Vector>`, in **world coordinates** (the adapter
+  already applied the camera transform)
 - pointer button state
 - "just pressed/released this tick" is derived: `down-now && !down-last-tick`
 
 **Feed API** (called by the adapter, not game code):
 - `feedKeyDown(...)`, `feedPointerMove(...)`, etc. The adapter maps pointer pixels →
-  camera coords before feeding.
+  world coords before feeding.
 
 ---
 

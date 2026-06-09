@@ -1,3 +1,4 @@
+import { Observable } from "../primitives/observable.ts";
 import type { Engine } from "../engine/engine.ts";
 
 export interface UnitProps {
@@ -19,6 +20,9 @@ export class Unit {
   readonly id: string;
 
   private _parent: Unit | null = null;
+  // Allocated lazily: most units (bullets, timers, spawners) never have a
+  // structural observer, and units are a per-frame spawn hot path.
+  private _onParentChanged: Observable<Unit | null> | null = null;
   private readonly _children: Unit[] = [];
   protected _engine: Engine | null = null;
   private _destroyed = false;
@@ -31,6 +35,16 @@ export class Unit {
 
   get parent(): Unit | null {
     return this._parent;
+  }
+
+  /**
+   * Fires after this unit's `parent` changes (attach, reparent, detach), with
+   * the new parent. Same-engine reparenting fires no tree enter/exit, so
+   * structural observers (e.g. a renderer's transform subscriptions) listen
+   * here instead.
+   */
+  get onParentChanged(): Observable<Unit | null> {
+    return (this._onParentChanged ??= new Observable());
   }
 
   get children(): readonly Unit[] {
@@ -80,6 +94,7 @@ export class Unit {
     child._parent = this;
     this._children.push(child);
     child.propagateEngine(this._engine);
+    child._onParentChanged?.fire(this);
   }
 
   /** Detach `child` from the tree. Does not destroy it. */
@@ -87,6 +102,7 @@ export class Unit {
     if (child._parent !== this) return;
     this._unlink(child); // detach first so the live tree reflects the removal
     child.propagateEngine(null, this); // then fire exits, reporting the parent left
+    child._onParentChanged?.fire(null);
   }
 
   private _unlink(child: Unit): void {

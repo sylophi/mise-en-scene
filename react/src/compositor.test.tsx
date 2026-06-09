@@ -1,7 +1,15 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { Camera, Engine, ObservableValue, Unit, Vector, mes } from "@mise/core";
+import {
+  Camera,
+  Engine,
+  ObservableValue,
+  Unit,
+  Unit2D,
+  Vector,
+  mes,
+} from "@mise/core";
 import { MiseProvider } from "./mise-provider.tsx";
 import { Renderable } from "./renderable.ts";
 import { useObservable } from "./use-observable.ts";
@@ -60,6 +68,22 @@ describe("compositor", () => {
     expect(screen.queryByTestId("box")).toBeNull();
     act(() => engine.root.addChild(mes(Box, {})));
     expect(screen.getByTestId("box")).toBeTruthy();
+  });
+
+  it("tracks the ancestor chain across reparenting", () => {
+    const a = new Unit2D({ position: new Vector(10, 0) });
+    const b = new Unit2D({ position: new Vector(20, 0) });
+    const box = mes(Box, {});
+    a.addChild(box);
+    const scene = mes(Unit2D, {}, [a, b]);
+    const engine = makeEngine(scene);
+    render(<MiseProvider engine={engine} />);
+    const wrapper = screen.getByTestId("box").parentElement;
+    expect(wrapper?.style.transform).toContain("calc(10 * var(--u))");
+    act(() => b.addChild(box)); // reparent a → b
+    expect(wrapper?.style.transform).toContain("calc(20 * var(--u))");
+    act(() => b.position.set(new Vector(30, 0))); // new chain stays subscribed
+    expect(wrapper?.style.transform).toContain("calc(30 * var(--u))");
   });
 
   it("removes renderables that leave the tree", () => {

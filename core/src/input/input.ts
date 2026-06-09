@@ -7,7 +7,7 @@ export interface KeyEvent {
   key: string;
 }
 
-/** Neutral pointer event payload (not a DOM event). Position is in camera coords. */
+/** Neutral pointer event payload (not a DOM event). Position is in world coords. */
 export interface PointerEvent {
   position: Vector;
   button?: number;
@@ -26,7 +26,7 @@ export class Input {
   readonly onPointerUp = new Observable<PointerEvent>();
   readonly onPointerMove = new Observable<PointerEvent>();
 
-  /** Pointer position in camera coordinates. */
+  /** Pointer position in world coordinates. */
   readonly pointer = new ObservableValue<Vector>(Vector.zero);
 
   private down = new Set<string>();
