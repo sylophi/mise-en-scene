@@ -6,7 +6,7 @@ export type Unsub = () => void;
  *
  * `T` is the payload type; defaults to `void` for bare "it happened" events.
  */
-export class Observable<T = void> {
+export class ObservableEvent<T = void> {
   private readonly listeners = new Set<(payload: T) => void>();
 
   /** Register a listener. Returns an unsubscribe function. */
@@ -19,6 +19,7 @@ export class Observable<T = void> {
 
   /** Notify all listeners with `payload`. */
   fire(payload: T): void {
+    if (this.listeners.size === 0) return; // skip the snapshot allocation
     // Iterate a snapshot so listeners may add/remove during dispatch.
     for (const cb of Array.from(this.listeners)) cb(payload);
   }

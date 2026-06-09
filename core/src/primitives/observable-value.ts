@@ -1,4 +1,4 @@
-import type { Unsub } from "./observable.ts";
+import type { Unsub } from "./observable-event.ts";
 
 /**
  * Holds a value and notifies listeners when it changes.
@@ -20,6 +20,8 @@ export class ObservableValue<T> {
   set(value: T): void {
     if (value === this.value) return;
     this.value = value;
+    if (this.listeners.size === 0) return; // skip the snapshot allocation
+    // Iterate a snapshot so listeners may add/remove during dispatch.
     for (const cb of Array.from(this.listeners)) cb(value);
   }
 

@@ -1,27 +1,13 @@
 import { Vector } from "../primitives/vector.ts";
+import { Matrix2D } from "../primitives/matrix2d.ts";
 import { ObservableValue } from "../primitives/observable-value.ts";
 import { Unit, type UnitProps } from "./unit.ts";
 
-/** A resolved 2D transform: position, rotation (radians), and per-axis scale. */
+/** A local 2D transform: position, rotation (radians), and per-axis scale. */
 export interface Transform {
   position: Vector;
   rotation: number;
   scale: Vector;
-}
-
-/** Compose a parent world transform with a child's local transform. */
-export function composeTransform(
-  parent: Transform,
-  local: Transform,
-): Transform {
-  return {
-    // child local point: scale, then rotate, then translate into the parent frame
-    position: parent.position.add(
-      local.position.mul(parent.scale).rotate(parent.rotation),
-    ),
-    rotation: parent.rotation + local.rotation,
-    scale: parent.scale.mul(local.scale),
-  };
 }
 
 export interface Unit2DProps extends UnitProps {
@@ -56,17 +42,28 @@ export class Unit2D extends Unit {
     };
   }
 
+  /** This unit's local transform as a matrix (translate · rotate · scale). */
+  get localMatrix(): Matrix2D {
+    return Matrix2D.fromTRS(
+      this.position.get(),
+      this.rotation.get(),
+      this.scale.get(),
+    );
+  }
+
   /**
-   * Absolute transform, computed on read by walking up *contiguous* `Unit2D`
-   * ancestors. Inheritance breaks at the first non-`Unit2D` ancestor — a plain
-   * `Unit` resets the origin, so its `Unit2D` children form a fresh subtree.
-   * (v1: no caching, no dirty flags.)
+   * Absolute transform as a 2x3 affine matrix, composed by matrix
+   * multiplication up *contiguous* `Unit2D` ancestors — exact even where
+   * non-uniform ancestor scale meets rotation (shear), which a TRS triple
+   * cannot represent. Inheritance breaks at the first non-`Unit2D` ancestor —
+   * a plain `Unit` resets the origin, so its `Unit2D` children form a fresh
+   * subtree. (v1: no caching, no dirty flags.)
    */
-  get worldTransform(): Transform {
+  get worldTransform(): Matrix2D {
     const parent = this.parent;
     if (parent instanceof Unit2D) {
-      return composeTransform(parent.worldTransform, this.localTransform);
+      return parent.worldTransform.multiply(this.localMatrix);
     }
-    return this.localTransform;
+    return this.localMatrix;
   }
 }

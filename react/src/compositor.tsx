@@ -14,7 +14,7 @@ import {
   Unit2D,
   type Camera,
   type Engine,
-  type Transform,
+  type Matrix2D,
 } from "@mise/core";
 import { Renderable } from "./renderable.ts";
 import { useEngine } from "./context.ts";
@@ -46,17 +46,32 @@ function useRenderables(engine: Engine): Renderable[] {
     collectRenderables(engine.root),
   );
   useEffect(() => {
-    const update = (): void => setList(collectRenderables(engine.root));
-    update(); // re-sync: the tree may have changed before this effect ran
+    setList(collectRenderables(engine.root)); // re-sync: tree may have changed before this effect
+    // Coalesce event bursts (N spawns in one tick) into a single re-collect.
+    let scheduled = false;
+    let active = true;
+    const update = (): void => {
+      if (scheduled) return;
+      scheduled = true;
+      queueMicrotask(() => {
+        scheduled = false;
+        if (active) setList(collectRenderables(engine.root));
+      });
+    };
     const onEnter = engine.onUnitEnter.addListener((u) => {
       if (u instanceof Renderable) update();
     });
     const onExit = engine.onUnitExit.addListener((u) => {
       if (u instanceof Renderable) update();
     });
+    // No Renderable filter: a moved unit may be an invisible ancestor whose
+    // renderable subtree shifted in draw order with it.
+    const onMoved = engine.onUnitMoved.addListener(() => update());
     return () => {
+      active = false;
       onEnter();
       onExit();
+      onMoved();
     };
   }, [engine]);
   return list;
@@ -70,7 +85,7 @@ function useRenderables(engine: Engine): Renderable[] {
  * Reparenting anywhere in the chain rebuilds the subscriptions, so the hook
  * tracks the unit's *current* ancestors, not the chain at mount time.
  */
-function useWorldTransform(unit: Unit2D): Transform {
+function useWorldTransform(unit: Unit2D): Matrix2D {
   const [, bump] = useReducer((n: number) => n + 1, 0);
   useEffect(() => {
     const unsubs: Array<() => void> = [];
@@ -99,7 +114,12 @@ function useWorldTransform(unit: Unit2D): Transform {
 
 // ── Entity wrapper (positioning) + content (appearance) ──────────────────────
 
-function EntityView({
+// Z layers stack first; tree order only breaks ties within a layer.
+const Z_BAND = 100_000;
+
+// Memoized so a Stage re-render (resize, list change) only re-renders the
+// wrappers whose `order` actually changed.
+const EntityView = memo(function EntityView({
   unit,
   order,
 }: {
@@ -117,14 +137,14 @@ function EntityView({
     top: 0,
     transformOrigin: "top left",
     transform: entityTransformCss(transform),
-    zIndex: z ?? order,
+    zIndex: z * Z_BAND + order,
   };
   return (
     <div style={style} data-unit-id={unit.id}>
       <View unit={unit} />
     </div>
   );
-}
+});
 
 // ── Camera viewport (applies the inverse camera transform once) ──────────────
 
@@ -138,8 +158,10 @@ function Viewport({
   const transform = useWorldTransform(camera);
   const style: CSSProperties = {
     position: "absolute",
-    left: 0,
-    top: 0,
+    // The camera's position is the center of the view, so the viewport origin
+    // sits at the stage center and the inverse camera transform acts there.
+    left: "50%",
+    top: "50%",
     width: 0,
     height: 0,
     transformOrigin: "top left",

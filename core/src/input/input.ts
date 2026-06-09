@@ -1,4 +1,4 @@
-import { Observable } from "../primitives/observable.ts";
+import { ObservableEvent } from "../primitives/observable-event.ts";
 import { ObservableValue } from "../primitives/observable-value.ts";
 import { Vector } from "../primitives/vector.ts";
 
@@ -15,16 +15,16 @@ export interface PointerEvent {
 
 /**
  * Headless input manager, exposed as `engine.input`. Offers both event
- * (`Observable`) and polling styles. A renderer/adapter feeds it real device
+ * (`ObservableEvent`) and polling styles. A renderer/adapter feeds it real device
  * events via the `feed*` methods; game code reads it. No DOM here.
  */
 export class Input {
   // Events
-  readonly onKeyDown = new Observable<KeyEvent>();
-  readonly onKeyUp = new Observable<KeyEvent>();
-  readonly onPointerDown = new Observable<PointerEvent>();
-  readonly onPointerUp = new Observable<PointerEvent>();
-  readonly onPointerMove = new Observable<PointerEvent>();
+  readonly onKeyDown = new ObservableEvent<KeyEvent>();
+  readonly onKeyUp = new ObservableEvent<KeyEvent>();
+  readonly onPointerDown = new ObservableEvent<PointerEvent>();
+  readonly onPointerUp = new ObservableEvent<PointerEvent>();
+  readonly onPointerMove = new ObservableEvent<PointerEvent>();
 
   /** Pointer position in world coordinates. */
   readonly pointer = new ObservableValue<Vector>(Vector.zero);

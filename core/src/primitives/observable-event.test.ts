@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { Observable } from "./observable.ts";
+import { ObservableEvent } from "./observable-event.ts";
 import { ObservableValue } from "./observable-value.ts";
 
-describe("Observable", () => {
+describe("ObservableEvent", () => {
   it("fires listeners with the payload", () => {
-    const ev = new Observable<number>();
+    const ev = new ObservableEvent<number>();
     const seen: number[] = [];
     ev.addListener((n) => seen.push(n));
     ev.fire(5);
@@ -13,7 +13,7 @@ describe("Observable", () => {
   });
 
   it("unsubscribe stops delivery", () => {
-    const ev = new Observable<number>();
+    const ev = new ObservableEvent<number>();
     const seen: number[] = [];
     const unsub = ev.addListener((n) => seen.push(n));
     ev.fire(1);
@@ -23,7 +23,7 @@ describe("Observable", () => {
   });
 
   it("supports a void payload", () => {
-    const ev = new Observable();
+    const ev = new ObservableEvent();
     let count = 0;
     ev.addListener(() => count++);
     ev.fire();
@@ -31,7 +31,7 @@ describe("Observable", () => {
   });
 
   it("tolerates listeners mutating the set during fire", () => {
-    const ev = new Observable();
+    const ev = new ObservableEvent();
     let count = 0;
     ev.addListener(() => {
       count++;

@@ -7,7 +7,7 @@ export type RenderableView<T extends Renderable> = (props: {
 }) => ReactNode;
 
 export interface RenderableProps extends Unit2DProps {
-  /** Explicit z-order. Unset (default) uses tree order. */
+  /** Z layer (integer, default 0). Layers stack first; tree order breaks ties. */
   z?: number;
 }
 
@@ -20,11 +20,11 @@ export abstract class Renderable extends Unit2D {
   /** The view. Defined by each subclass; receives `{ unit: this }`. */
   abstract readonly component: RenderableView<this>;
 
-  /** Explicit z-order override; null = use tree order. */
-  readonly z = new ObservableValue<number | null>(null);
+  /** Z layer. Draw order sorts by layer first, tree order within a layer. */
+  readonly z: ObservableValue<number>;
 
   constructor(props: RenderableProps = {}) {
     super(props);
-    if (props.z !== undefined) this.z.set(props.z);
+    this.z = new ObservableValue(props.z ?? 0);
   }
 }

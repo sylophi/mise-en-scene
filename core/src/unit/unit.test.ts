@@ -133,6 +133,29 @@ describe("engine binding & lifecycle", () => {
     expect(c.engine).toBe(e);
   });
 
+  it("fires onUnitMoved only on same-engine reparents", () => {
+    const log: string[] = [];
+    const e = engine();
+    const a = new T("a", log);
+    const b = new T("b", log);
+    const c = new T("c", log);
+    a.addChild(b);
+    a.addChild(c);
+    e.root.addChild(a);
+    const moved: Unit[] = [];
+    e.onUnitMoved.addListener((u) => moved.push(u));
+    b.addChild(c); // live reparent -> move
+    expect(moved).toEqual([c]);
+    const d = new T("d", log);
+    a.addChild(d); // first mount: enter, not a move
+    a.removeChild(d); // detach: exit, not a move
+    const p = new T("p", log);
+    const q = new T("q", log);
+    p.addChild(q);
+    a.addChild(q); // mounting from a detached parent: enter, not a move
+    expect(moved).toEqual([c]);
+  });
+
   it("leaving the tree (removeChild) fires exit bottom-up and unbinds", () => {
     const log: string[] = [];
     const e = engine();

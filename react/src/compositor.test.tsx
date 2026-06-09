@@ -13,6 +13,7 @@ import {
 import { MiseProvider } from "./mise-provider.tsx";
 import { Renderable } from "./renderable.ts";
 import { useObservable } from "./use-observable.ts";
+import { entityTransformCss } from "./coords.ts";
 
 class Box extends Renderable {
   readonly component = (_props: { unit: Box }) => (
@@ -39,6 +40,9 @@ function makeEngine(scene?: Unit): Engine {
 
 afterEach(() => cleanup());
 
+const wrapperOf = (u: Unit): HTMLElement | null =>
+  document.querySelector(`[data-unit-id="${u.id}"]`);
+
 describe("compositor", () => {
   it("renders a renderable's component", () => {
     const engine = makeEngine(mes(Box, { position: new Vector(50, 50) }));
@@ -62,15 +66,16 @@ describe("compositor", () => {
     expect(screen.getByTestId("count").textContent).toBe("5");
   });
 
-  it("picks up renderables that enter the tree after mount", () => {
+  it("picks up renderables that enter the tree after mount", async () => {
     const engine = makeEngine();
     render(<MiseProvider engine={engine} />);
     expect(screen.queryByTestId("box")).toBeNull();
-    act(() => engine.root.addChild(mes(Box, {})));
+    // async: re-collects coalesce into a microtask
+    await act(async () => engine.root.addChild(mes(Box, {})));
     expect(screen.getByTestId("box")).toBeTruthy();
   });
 
-  it("tracks the ancestor chain across reparenting", () => {
+  it("tracks the ancestor chain across reparenting", async () => {
     const a = new Unit2D({ position: new Vector(10, 0) });
     const b = new Unit2D({ position: new Vector(20, 0) });
     const box = mes(Box, {});
@@ -80,18 +85,55 @@ describe("compositor", () => {
     render(<MiseProvider engine={engine} />);
     const wrapper = screen.getByTestId("box").parentElement;
     expect(wrapper?.style.transform).toContain("calc(10 * var(--u))");
-    act(() => b.addChild(box)); // reparent a → b
+    await act(async () => b.addChild(box)); // reparent a → b
     expect(wrapper?.style.transform).toContain("calc(20 * var(--u))");
     act(() => b.position.set(new Vector(30, 0))); // new chain stays subscribed
     expect(wrapper?.style.transform).toContain("calc(30 * var(--u))");
   });
 
-  it("removes renderables that leave the tree", () => {
+  it("stacks z layers above tree order", () => {
+    const a = mes(Box, {});
+    const b = mes(Box, { z: 1 });
+    const c = mes(Box, {}); // later in tree order than b, but in layer 0
+    const scene = mes(Unit2D, {}, [a, b, c]);
+    render(<MiseProvider engine={makeEngine(scene)} />);
+    const zOf = (u: Unit): number => Number(wrapperOf(u)?.style.zIndex);
+    expect(zOf(b)).toBeGreaterThan(zOf(c)); // z=1 beats every layer-0 unit
+    expect(zOf(c)).toBeGreaterThan(zOf(a)); // tree order breaks ties in a layer
+  });
+
+  it("renders shear: non-uniform ancestor scale over a rotated unit", () => {
+    const frame = new Unit2D({ scale: new Vector(2, 1) });
+    const box = mes(Box, { rotation: Math.PI / 2 });
+    frame.addChild(box);
+    render(<MiseProvider engine={makeEngine(frame)} />);
+    const wrapper = screen.getByTestId("box").parentElement;
+    // S·R maps the x-basis to (0,1) and the y-basis to (-2,0) — a sheared
+    // frame no translate/rotate/scale string can express.
+    expect(wrapper?.style.transform).toBe(
+      entityTransformCss(box.worldTransform),
+    );
+    expect(wrapper?.style.transform).toContain(", -2,");
+  });
+
+  it("updates draw order when a renderable is reparented", async () => {
+    const boxA = mes(Box, {});
+    const boxB = mes(Box, {});
+    const scene = mes(Unit2D, {}, [boxA, boxB]);
+    render(<MiseProvider engine={makeEngine(scene)} />);
+    expect(wrapperOf(boxA)?.style.zIndex).toBe("0");
+    expect(wrapperOf(boxB)?.style.zIndex).toBe("1");
+    await act(async () => boxB.addChild(boxA)); // children draw above parents
+    expect(wrapperOf(boxB)?.style.zIndex).toBe("0");
+    expect(wrapperOf(boxA)?.style.zIndex).toBe("1");
+  });
+
+  it("removes renderables that leave the tree", async () => {
     const box = mes(Box, {});
     const engine = makeEngine(box);
     render(<MiseProvider engine={engine} />);
     expect(screen.getByTestId("box")).toBeTruthy();
-    act(() => box.destroy());
+    await act(async () => box.destroy());
     expect(screen.queryByTestId("box")).toBeNull();
   });
 });

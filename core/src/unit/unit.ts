@@ -1,4 +1,4 @@
-import { Observable } from "../primitives/observable.ts";
+import { ObservableEvent } from "../primitives/observable-event.ts";
 import type { Engine } from "../engine/engine.ts";
 
 export interface UnitProps {
@@ -22,7 +22,7 @@ export class Unit {
   private _parent: Unit | null = null;
   // Allocated lazily: most units (bullets, timers, spawners) never have a
   // structural observer, and units are a per-frame spawn hot path.
-  private _onParentChanged: Observable<Unit | null> | null = null;
+  private _onParentChanged: ObservableEvent<Unit | null> | null = null;
   private readonly _children: Unit[] = [];
   protected _engine: Engine | null = null;
   private _destroyed = false;
@@ -43,17 +43,22 @@ export class Unit {
    * structural observers (e.g. a renderer's transform subscriptions) listen
    * here instead.
    */
-  get onParentChanged(): Observable<Unit | null> {
-    return (this._onParentChanged ??= new Observable());
+  get onParentChanged(): ObservableEvent<Unit | null> {
+    return (this._onParentChanged ??= new ObservableEvent());
   }
 
   get children(): readonly Unit[] {
     return this._children;
   }
 
-  /** The engine this unit is bound to, or null while engine-less (not live). */
-  get engine(): Engine | null {
-    return this._engine;
+  /**
+   * The engine this unit is bound to. Typed non-null for ergonomics: every
+   * live unit has one, and tick/lifecycle code is the intended call site.
+   * Reading it on a treeless/detached unit returns null at runtime — doing
+   * so is a bug in the caller. (Check `isLive` if genuinely unsure.)
+   */
+  get engine(): Engine {
+    return this._engine as Engine;
   }
 
   /** Whether the unit is currently in the live tree (bound to an engine). */
@@ -89,12 +94,17 @@ export class Unit {
     }
 
     if (child._parent === this) return;
+    // A same-engine reparent fires no enter/exit; report it as a move instead.
+    const engine = this._engine;
+    const isMove =
+      child._parent !== null && engine !== null && child._engine === engine;
     if (child._parent) child._parent._unlink(child);
 
     child._parent = this;
     this._children.push(child);
     child.propagateEngine(this._engine);
     child._onParentChanged?.fire(this);
+    if (isMove) engine.onUnitMoved.fire(child);
   }
 
   /** Detach `child` from the tree. Does not destroy it. */

@@ -20,7 +20,7 @@ A renderer (e.g. `mise/react`) observes the engine and draws it however it wants
 
 ## Reactive primitives
 
-### `Observable<T>`
+### `ObservableEvent<T>`
 A pure event. No stored value.
 
 - `fire(payload: T)` — notify all listeners with the payload.
@@ -48,6 +48,18 @@ All methods return new `Vector`s.
 - `cross(v)` → scalar (`x*v.y - y*v.x`)
 - `length()`, `lengthSquared()`, `normalize()`
 
+### `Matrix2D`
+Immutable 2x3 affine matrix in CSS `matrix(a, b, c, d, tx, ty)` order. The world-
+transform representation: unlike a position/rotation/scale triple it composes
+exactly — non-uniform scale under rotation produces **shear**, which only a
+matrix can hold. (Local transforms stay TRS; only composed results are matrices.)
+
+- `Matrix2D.fromTRS(position, rotation, scale)` — translate · rotate · scale
+- `multiply(m)` — compose (`m` applies to a point first)
+- `invert()`
+- `apply(v)` — transform a point → `Vector`
+- `Matrix2D.identity`
+
 ---
 
 ## Class hierarchy
@@ -71,7 +83,7 @@ Ticks, has reactive state, lives in a tree. Invisible. (managers, spawners, time
 - `parent`, `children`
 - `addChild(child)` / `removeChild(child)` — detaches but does **not** destroy
 - Reparenting allowed (move via `addChild`)
-- `onParentChanged` — `Observable<Unit | null>`, fires after `parent` changes
+- `onParentChanged` — `ObservableEvent<Unit | null>`, fires after `parent` changes
   (attach, reparent, detach) with the new parent. Same-engine reparenting fires
   no tree enter/exit, so structural observers (e.g. a renderer following an
   ancestor chain) listen here.
@@ -90,8 +102,11 @@ Ticks, has reactive state, lives in a tree. Invisible. (managers, spawners, time
 - `addChild` **throws** if the child's subtree is already bound to a *different*
   engine. (Same-engine reparenting is fine.)
 - The binding originates at the `Root` via `root.setEngine(engine)`.
-- `engine` — reference to the bound `Engine` (or null while engine-less). Components
-  and logic reach global state through it (e.g. `unit.engine.time`).
+- `engine` — reference to the bound `Engine`. Components and logic reach global
+  state through it (e.g. `unit.engine.time`). Typed **non-null** for ergonomics:
+  every live unit has one and tick/lifecycle code is the intended call site.
+  Reading it on a treeless/detached unit returns null at runtime — that's on
+  the caller (check `isLive` if genuinely unsure).
 
 **Lifecycle**
 - `constructor` — one-time setup (runs while treeless; cannot see `parent`/siblings)
@@ -108,7 +123,7 @@ Ticks, has reactive state, lives in a tree. Invisible. (managers, spawners, time
 - Both fire on **every live unit**, **depth-first top-down**, each cycle. (v1: always tick everything, no per-unit toggle.)
 
 **State**
-- Declared as `Observable` / `ObservableValue` fields.
+- Declared as `ObservableEvent` / `ObservableValue` fields.
 
 ### `Unit2D extends Unit`
 Has a place in 2D space; may be invisible. (trigger zones, waypoints, spawn points, sensors)
@@ -119,7 +134,11 @@ Has a place in 2D space; may be invisible. (trigger zones, waypoints, spawn poin
 - `scale: ObservableValue<Vector>`
 
 **World transform**
-- `worldTransform` — computed on read by walking up the chain (v1: dumb, no cache, no dirty flags).
+- `worldTransform: Matrix2D` — computed on read by multiplying matrices up the
+  chain (v1: dumb, no cache, no dirty flags). Local TRS converts via
+  `Matrix2D.fromTRS`; composing as matrices keeps shear exact where non-uniform
+  ancestor scale meets rotation, which a TRS triple cannot represent.
+- `localMatrix: Matrix2D` — the local transform as a matrix.
 - **Inheritance breaks at non-`Unit2D` ancestors.** Walk up only through contiguous
   `Unit2D` parents; stop at the first non-`Unit2D` (or root). A plain `Unit` resets
   the origin — its `Unit2D` children form a fresh transform subtree.
@@ -144,8 +163,8 @@ like any unit, so it can be parented, moved, and animated.
   world transform** to the scene, so moving the camera pans the view, scaling zooms,
   rotating rotates: `world → view = inverse(cameraWorldTransform)`, then ÷ `width/height`
   to normalize.
-- Coordinate space is **origin top-left, y-down** (DOM-native). `(0,0)` = top-left,
-  `(width/2, height/2)` = center.
+- The camera's `position` is the **center** of the view: the visible rect spans
+  ±`width/2`, ±`height/2` around it. The coordinate space is y-down (DOM-native).
 - **One active camera at a time**, held by the `Engine` (see below). It does not draw
   itself; it only defines the view.
 
@@ -162,10 +181,13 @@ Owns the root unit and drives the loops. Units stay pure; the engine drives them
   through. A renderer reads this; swapping it re-renders the view. (The `Camera` itself
   is just a `Unit2D` in the tree; this is the pointer to the active one.)
 - `input: Input` — the input manager (see below).
-- `onUnitEnter` / `onUnitExit` — `Observable<Unit>`, fired as units enter (top-down)
+- `onUnitEnter` / `onUnitExit` — `ObservableEvent<Unit>`, fired as units enter (top-down)
   and leave (bottom-up) the live tree. Retained renderers use these to keep their
   view set in sync without re-crawling. A unit is fully detached before `onUnitExit`
   fires, so the tree already reflects the removal.
+- `onUnitMoved` — `ObservableEvent<Unit>`, fired on a same-engine reparent (which fires
+  no enter/exit). The moved unit may be an invisible ancestor whose subtree shifted
+  with it; retained renderers refresh draw order from this.
 - `changeScene(unit)` — destroys the scene it previously mounted and mounts the new
   one (a flag can detach-for-reuse instead of destroy). It only manages scenes
   mounted through it: units added directly under `Root` (persistent managers,
@@ -187,9 +209,9 @@ it real device events (see `mise/react`). No DOM here.
 
 Event payloads (`KeyEvent`, `PointerEvent`) are **neutral `core` types**, not DOM events.
 
-**Events** (`Observable`s — listen anywhere):
-- `onKeyDown` / `onKeyUp` — `Observable<KeyEvent>` (raw keys; no action mapping in v1)
-- `onPointerDown` / `onPointerUp` / `onPointerMove` — `Observable<PointerEvent>`
+**Events** (`ObservableEvent`s — listen anywhere):
+- `onKeyDown` / `onKeyUp` — `ObservableEvent<KeyEvent>` (raw keys; no action mapping in v1)
+- `onPointerDown` / `onPointerUp` / `onPointerMove` — `ObservableEvent<PointerEvent>`
 
 **Polling** (query inside `tick`):
 - `isDown(key)` → boolean

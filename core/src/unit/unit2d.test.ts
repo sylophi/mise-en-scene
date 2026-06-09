@@ -15,7 +15,8 @@ describe("Unit2D transform", () => {
     const parent = new Unit2D({ position: new Vector(10, 0) });
     const child = new Unit2D({ position: new Vector(5, 0) });
     parent.addChild(child);
-    expect(child.worldTransform.position.equals(new Vector(15, 0))).toBe(true);
+    const origin = child.worldTransform.apply(Vector.zero);
+    expect(origin.equals(new Vector(15, 0))).toBe(true);
   });
 
   it("applies parent rotation to child offset", () => {
@@ -25,17 +26,30 @@ describe("Unit2D transform", () => {
     });
     const child = new Unit2D({ position: new Vector(5, 0) });
     parent.addChild(child);
-    const w = child.worldTransform.position;
+    const w = child.worldTransform.apply(Vector.zero);
     expect(w.x).toBeCloseTo(10);
     expect(w.y).toBeCloseTo(5);
   });
 
-  it("composes scale per-axis and sums rotation", () => {
-    const parent = new Unit2D({ scale: new Vector(2, 3), rotation: 0.5 });
-    const child = new Unit2D({ scale: new Vector(4, 5), rotation: 0.25 });
+  it("composes nested scale per-axis", () => {
+    const parent = new Unit2D({ scale: new Vector(2, 3) });
+    const child = new Unit2D({ scale: new Vector(4, 5) });
     parent.addChild(child);
-    expect(child.worldTransform.scale.equals(new Vector(8, 15))).toBe(true);
-    expect(child.worldTransform.rotation).toBeCloseTo(0.75);
+    const p = child.worldTransform.apply(new Vector(1, 1));
+    expect(p.x).toBeCloseTo(8);
+    expect(p.y).toBeCloseTo(15);
+  });
+
+  it("keeps shear when non-uniform parent scale meets child rotation", () => {
+    const parent = new Unit2D({ scale: new Vector(2, 1) });
+    const child = new Unit2D({ rotation: Math.PI / 2 });
+    parent.addChild(child);
+    // (1,0) rotates 90° to (0,1); the parent stretches x only, so it stays
+    // (0,1). The old TRS composition produced (0,2) — scale leaked onto the
+    // rotated axis.
+    const p = child.worldTransform.apply(new Vector(1, 0));
+    expect(p.x).toBeCloseTo(0);
+    expect(p.y).toBeCloseTo(1);
   });
 
   it("breaks inheritance at a non-Unit2D ancestor", () => {
@@ -45,6 +59,7 @@ describe("Unit2D transform", () => {
     top.addChild(plain);
     plain.addChild(leaf);
     // leaf's parent is a plain Unit, so its world == its local
-    expect(leaf.worldTransform.position.equals(new Vector(5, 0))).toBe(true);
+    const origin = leaf.worldTransform.apply(Vector.zero);
+    expect(origin.equals(new Vector(5, 0))).toBe(true);
   });
 });

@@ -1,30 +1,36 @@
-import { Vector, type Camera, type Transform } from "@mise/core";
+import { Vector, type Camera, type Matrix2D } from "@mise/core";
 
 /**
- * CSS transform placing an entity wrapper at its world pose. Positions are in
- * camera units, scaled to pixels by the stage's `--u` variable.
+ * CSS transform placing an entity wrapper at its world pose. The linear part
+ * (rotation/scale/shear) goes in a unitless `matrix()`; the translation stays
+ * in a `translate()` because positions are in camera units scaled by the
+ * stage's `--u` variable, and `matrix()` cannot contain `calc()`/`var()`.
  */
-export function entityTransformCss(t: Transform): string {
+export function entityTransformCss(m: Matrix2D): string {
   return (
-    `translate(calc(${t.position.x} * var(--u)), calc(${t.position.y} * var(--u))) ` +
-    `rotate(${t.rotation}rad) scale(${t.scale.x}, ${t.scale.y})`
+    `translate(calc(${m.tx} * var(--u)), calc(${m.ty} * var(--u))) ` +
+    `matrix(${m.a}, ${m.b}, ${m.c}, ${m.d}, 0, 0)`
   );
 }
 
 /**
- * CSS transform for the viewport — the inverse of the camera's world transform,
- * applied once so a camera move re-renders one element, not every entity.
+ * CSS transform for the viewport — the inverse of the camera's world
+ * transform, applied once so a camera move re-renders one element, not every
+ * entity. `M⁻¹ = L⁻¹ · T⁻¹`: the translation undoes first (rightmost), then
+ * the inverted linear part.
  */
-export function viewportTransformCss(t: Transform): string {
+export function viewportTransformCss(m: Matrix2D): string {
+  const inv = m.invert();
   return (
-    `scale(${1 / t.scale.x}, ${1 / t.scale.y}) rotate(${-t.rotation}rad) ` +
-    `translate(calc(${-t.position.x} * var(--u)), calc(${-t.position.y} * var(--u)))`
+    `matrix(${inv.a}, ${inv.b}, ${inv.c}, ${inv.d}, 0, 0) ` +
+    `translate(calc(${-m.tx} * var(--u)), calc(${-m.ty} * var(--u)))`
   );
 }
 
 /**
  * Map a screen pixel (relative to the stage's top-left) to world coordinates:
- * divide out `--u` to get view coords, then apply the camera's world transform.
+ * divide out `--u`, recenter (the camera's position is the middle of the
+ * stage), then apply the camera's world transform.
  */
 export function screenToWorld(
   clientX: number,
@@ -35,9 +41,8 @@ export function screenToWorld(
   camera: Camera,
 ): Vector {
   const view = new Vector(
-    (clientX - stageLeft) / (u || 1),
-    (clientY - stageTop) / (u || 1),
+    (clientX - stageLeft) / (u || 1) - camera.width.get() / 2,
+    (clientY - stageTop) / (u || 1) - camera.height.get() / 2,
   );
-  const cam = camera.worldTransform;
-  return cam.position.add(view.mul(cam.scale).rotate(cam.rotation));
+  return camera.worldTransform.apply(view);
 }

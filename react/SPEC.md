@@ -53,8 +53,11 @@ The context provider **and** the compositor — one component.
 
 - On mount: crawl the tree **once** to collect existing `Renderable`s.
 - After that: subscribe to **tree enter/exit** (filtered to `Renderable`s) to add/remove
-  entries incrementally — **never re-crawls** for structure. (The per-tick simulation
-  crawl in `core` is separate.)
+  entries, and to **`onUnitMoved`** (unfiltered — a moved invisible ancestor shifts its
+  renderable subtree in draw order) to refresh order on reparents. Structure is only
+  re-collected on these events, never per frame, and event bursts (N spawns in one
+  tick) coalesce into a single microtask re-collect. (The per-tick simulation crawl
+  in `core` is separate.)
 - Renders a **keyed list** (key = `unit.id`); each `Renderable` is its **own** memoized,
   subscribed component. A unit's change re-renders only that unit — siblings and the
   container are untouched. The container reconciles only on add/remove.
@@ -63,11 +66,13 @@ The context provider **and** the compositor — one component.
   since the chain breaks at non-`Unit2D` ancestors and invisible `Unit2D`s emit no DOM.)
 
 ### Z-order (Godot model)
-- Default draw order = **tree order** (depth-first; parents under children, siblings in
-  order). The compositor assigns each wrapper a CSS `z-index` from its tree-traversal
-  position — direct mapping since the stage is flat.
-- An optional explicit **`z`** on a `Renderable` (`ObservableValue`, default unset)
-  overrides tree order to lift it onto another layer.
+- Draw order = **`z` layer first, tree order within a layer**. `z` is an integer
+  `ObservableValue<number>` on `Renderable` (default `0`); tree order is depth-first
+  (parents under children, siblings in order).
+- Implemented per wrapper as CSS `z-index = z * 100000 + treeOrder` — banding keeps
+  every layer strictly above lower layers regardless of tree position, with no
+  global sort. (Tree indices are assumed < 100000; `z` is meant to be a small
+  integer layer.)
 
 ### Two-layer transform (compositor-owned)
 The camera transform is applied **once** on a container; each unit wrapper carries only
@@ -75,8 +80,8 @@ its **own** `worldTransform`. So a camera move re-renders one element, not every
 
 ```html
 <div class="stage">                              <!-- fixed pixels; ResizeObserver sets --u -->
-  <div class="viewport" style="transform: «inverse(cameraWorldTransform)»">
-    <div class="wrapper" style="position:absolute; transform: translate(...) rotate(...) scale(...)">
+  <div class="viewport" style="left:50%; top:50%; transform: «inverse(cameraWorldTransform)»">
+    <div class="wrapper" style="position:absolute; transform: translate(calc(tx * var(--u)), ...) matrix(a, b, c, d, 0, 0)">
       <!-- your component renders here, position-agnostic -->
     </div>
     ...
@@ -84,8 +89,16 @@ its **own** `worldTransform`. So a camera move re-renders one element, not every
 </div>
 ```
 
+World transforms are `Matrix2D`s (so shear from non-uniform ancestor scale under
+rotation renders correctly). CSS `matrix()` cannot contain `var()`/`calc()`, so each
+transform splits: the unitless linear part (rotation/scale/shear) goes in `matrix()`,
+the translation goes in `translate(calc(n * var(--u)))` so resize still reflows via
+`--u` alone. The viewport is the mirror image: `matrix(L⁻¹) translate(-t · --u)`.
+
 - The **viewport** subscribes to the active camera (its transform + `width/height`) and
-  re-renders only when the camera changes.
+  re-renders only when the camera changes. It sits at the **stage center** (the
+  camera's `position` is the center of the view), so the inverse camera transform
+  acts around mid-screen.
 - Each **wrapper** applies its unit's `worldTransform` (camera-unit space × `--u`) and
   subscribes only to that unit's `transform` — re-renders only when *that* unit moves.
 - **Wrapper/content split:** the wrapper (cheap, empty) handles movement; the `component`
@@ -129,7 +142,8 @@ The renderer **observes** the scale live; it never assumes one.
   sizes alike. On resize, that one value updates and the whole scene reflows.
 - Units have **no width/height** — only `scale`. A unit's on-screen size is whatever its
   component's HTML renders (in camera units), times `scale`.
-- Coordinate space is origin top-left, y-down (matches `core`'s `Camera`).
+- Coordinate space is y-down; the camera's `position` lands at the center of the
+  stage (matches `core`'s `Camera`).
 - (`em`-as-unit was rejected — the font-size cascade would corrupt component text sizing.)
 
 ---

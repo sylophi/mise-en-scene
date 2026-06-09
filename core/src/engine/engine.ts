@@ -1,4 +1,4 @@
-import { Observable } from "../primitives/observable.ts";
+import { ObservableEvent } from "../primitives/observable-event.ts";
 import { ObservableValue } from "../primitives/observable-value.ts";
 import { Input } from "../input/input.ts";
 import { Unit } from "../unit/unit.ts";
@@ -37,9 +37,15 @@ export class Engine {
   readonly activeCamera = new ObservableValue<Camera | null>(null);
 
   /** Fires when a unit enters the live tree (top-down). For retained renderers. */
-  readonly onUnitEnter = new Observable<Unit>();
+  readonly onUnitEnter = new ObservableEvent<Unit>();
   /** Fires when a unit leaves the live tree (bottom-up). For retained renderers. */
-  readonly onUnitExit = new Observable<Unit>();
+  readonly onUnitExit = new ObservableEvent<Unit>();
+  /**
+   * Fires when a unit moves within the live tree (same-engine reparent), which
+   * fires no enter/exit. The moved unit may be an invisible ancestor whose
+   * whole subtree shifted with it; retained renderers refresh draw order here.
+   */
+  readonly onUnitMoved = new ObservableEvent<Unit>();
 
   readonly fixedStep: number;
   readonly maxCatchUp: number;
