@@ -85,8 +85,8 @@ export class Unit {
   /** Detach `child` from the tree. Does not destroy it. */
   removeChild(child: Unit): void {
     if (child._parent !== this) return;
-    child.propagateEngine(null); // fire exits while still linked (parent available)
-    this._unlink(child);
+    this._unlink(child); // detach first so the live tree reflects the removal
+    child.propagateEngine(null, this); // then fire exits, reporting the parent left
   }
 
   private _unlink(child: Unit): void {
@@ -99,18 +99,24 @@ export class Unit {
    * Set the engine binding for this unit and its subtree, firing lifecycle on the
    * transitions. Enter is top-down (self before children); exit is bottom-up.
    */
-  protected propagateEngine(engine: Engine | null): void {
+  protected propagateEngine(
+    engine: Engine | null,
+    exitParent: Unit | null = this._parent,
+  ): void {
     if (this._engine === engine) return;
 
     if (engine) {
       // Entering the live tree: bind + notify self, then descend.
       this._engine = engine;
       this.onTreeEnter(this._parent);
+      engine.onUnitEnter.fire(this);
       for (const c of this._children) c.propagateEngine(engine);
     } else {
-      // Leaving: descend first (bottom-up), then notify + unbind self.
+      // Leaving: descend first (bottom-up), then notify + unbind self. The top
+      // unit is already unlinked, so `exitParent` carries the parent it left.
       for (const c of this._children) c.propagateEngine(null);
-      this.onTreeExit(this._parent);
+      this.onTreeExit(exitParent);
+      this._engine?.onUnitExit.fire(this);
       this._engine = null;
     }
   }

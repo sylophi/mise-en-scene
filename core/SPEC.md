@@ -155,6 +155,10 @@ Owns the root unit and drives the loops. Units stay pure; the engine drives them
   through. A renderer reads this; swapping it re-renders the view. (The `Camera` itself
   is just a `Unit2D` in the tree; this is the pointer to the active one.)
 - `input: Input` — the input manager (see below).
+- `onUnitEnter` / `onUnitExit` — `Observable<Unit>`, fired as units enter (top-down)
+  and leave (bottom-up) the live tree. Retained renderers use these to keep their
+  view set in sync without re-crawling. A unit is fully detached before `onUnitExit`
+  fires, so the tree already reflects the removal.
 - `changeScene(unit)` — destroys the current child under `Root` and mounts the new one
   (sugar over `root` manipulation; a flag can detach-for-reuse instead of destroy).
 - **Fixed loop** (`tick`): `setInterval`-driven, default **60Hz** (configurable).

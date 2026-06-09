@@ -1,3 +1,4 @@
+import { Observable } from "../primitives/observable.ts";
 import { ObservableValue } from "../primitives/observable-value.ts";
 import { Input } from "../input/input.ts";
 import { Unit } from "../unit/unit.ts";
@@ -29,6 +30,11 @@ export class Engine {
   readonly root: Root;
   readonly input = new Input();
   readonly activeCamera = new ObservableValue<Camera | null>(null);
+
+  /** Fires when a unit enters the live tree (top-down). For retained renderers. */
+  readonly onUnitEnter = new Observable<Unit>();
+  /** Fires when a unit leaves the live tree (bottom-up). For retained renderers. */
+  readonly onUnitExit = new Observable<Unit>();
 
   readonly fixedStep: number;
   readonly maxCatchUp: number;
