@@ -21,7 +21,7 @@ export interface Unit2DProps extends UnitProps {
  * spawn points). The stored transform is *local* (relative to the parent);
  * `worldTransform` composes up the chain.
  */
-export class Unit2D extends Unit {
+export class Unit2D<P extends Unit2DProps = Unit2DProps> extends Unit<P> {
   /** Local position, relative to the parent. Assignment fires `position$`. */
   readonly position$: ObservableValue<Vector>;
   get position(): Vector {
@@ -49,11 +49,11 @@ export class Unit2D extends Unit {
     this.scale$.set(v);
   }
 
-  constructor(props: Unit2DProps = {}) {
+  constructor(props?: NoInfer<P>) {
     super(props);
-    this.position$ = new ObservableValue(props.position ?? Vector.zero);
-    this.rotation$ = new ObservableValue(props.rotation ?? 0);
-    this.scale$ = new ObservableValue(props.scale ?? Vector.one);
+    this.position$ = new ObservableValue(props?.position ?? Vector.zero);
+    this.rotation$ = new ObservableValue(props?.rotation ?? 0);
+    this.scale$ = new ObservableValue(props?.scale ?? Vector.one);
   }
 
   /** This unit's local transform as a plain object. */

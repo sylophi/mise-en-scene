@@ -29,8 +29,9 @@ export function viewportTransformCss(m: Matrix2D): string {
 
 /**
  * Map a screen pixel (relative to the stage's top-left) to world coordinates:
- * divide out `--u`, recenter (the camera's position is the middle of the
- * stage), then apply the camera's world transform.
+ * divide out `--u`, recenter (the camera's view center is the middle of the
+ * stage), then apply the camera's view transform, so pointer coordinates match
+ * what is actually rendered (smoothing, limits, and offset included).
  */
 export function screenToWorld(
   clientX: number,
@@ -44,5 +45,5 @@ export function screenToWorld(
     (clientX - stageLeft) / (u || 1) - camera.width / 2,
     (clientY - stageTop) / (u || 1) - camera.height / 2,
   );
-  return camera.worldTransform.apply(view);
+  return camera.viewTransform.apply(view);
 }

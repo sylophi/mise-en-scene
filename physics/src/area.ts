@@ -5,7 +5,10 @@ import {
   type ColliderDesc,
 } from "@dimforge/rapier2d-compat";
 import { ObservableEvent } from "@mise/core";
-import { CollisionObject2D } from "./collision-object.ts";
+import {
+  CollisionObject2D,
+  type CollisionObject2DProps,
+} from "./collision-object.ts";
 
 /**
  * A detection zone: overlaps things but collides with nothing. Hitboxes,
@@ -16,7 +19,9 @@ import { CollisionObject2D } from "./collision-object.ts";
  * overlap actually changes. For "what is inside right now" (a hitbox alive
  * for a few frames), poll {@link getOverlapping} instead.
  */
-export class Area2D extends CollisionObject2D {
+export class Area2D<
+  P extends CollisionObject2DProps = CollisionObject2DProps,
+> extends CollisionObject2D<P> {
   /** Fires when a body (not an area) starts overlapping this area. */
   readonly onBodyEntered = new ObservableEvent<CollisionObject2D>();
   /** Fires when a body stops overlapping this area. */

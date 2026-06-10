@@ -155,17 +155,21 @@ function Viewport({
   camera: Camera;
   children: ReactNode;
 }): ReactNode {
-  const transform = useWorldTransform(camera);
+  // Two re-render triggers: the camera's transform chain (position/reparent)
+  // and the resolved view (smoothing advance, offset, limits). The style reads
+  // `viewTransform`, which folds both together.
+  useWorldTransform(camera);
+  useObservable(camera.viewCenter$);
   const style: CSSProperties = {
     position: "absolute",
-    // The camera's position is the center of the view, so the viewport origin
-    // sits at the stage center and the inverse camera transform acts there.
+    // The camera's view center is the center of the view, so the viewport
+    // origin sits at the stage center and the inverse transform acts there.
     left: "50%",
     top: "50%",
     width: 0,
     height: 0,
     transformOrigin: "top left",
-    transform: viewportTransformCss(transform),
+    transform: viewportTransformCss(camera.viewTransform),
   };
   return <div style={style}>{children}</div>;
 }

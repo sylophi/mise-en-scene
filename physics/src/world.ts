@@ -46,7 +46,9 @@ export interface RayCastOptions {
  * This runs before descendant ticks (the engine walks parent-first), so game
  * logic always sees this frame's collision state.
  */
-export class PhysicsWorld2D extends Unit {
+export class PhysicsWorld2D<
+  P extends PhysicsWorld2DProps = PhysicsWorld2DProps,
+> extends Unit<P> {
   /** The underlying Rapier world, for anything this wrapper doesn't expose. */
   readonly world: World;
 
@@ -54,10 +56,10 @@ export class PhysicsWorld2D extends Unit {
   private readonly objects = new Set<CollisionObject2D>();
   private readonly byCollider = new Map<number, CollisionObject2D>();
 
-  constructor(props: PhysicsWorld2DProps = {}) {
+  constructor(props?: NoInfer<P>) {
     super(props);
     assertPhysicsReady();
-    this.world = new World(props.gravity ?? Vector.zero);
+    this.world = new World(props?.gravity ?? Vector.zero);
     this.eventQueue = new EventQueue(true);
   }
 

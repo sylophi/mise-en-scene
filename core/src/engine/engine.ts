@@ -159,8 +159,14 @@ export class Engine {
     this.accumulator += realDt;
     let steps = 0;
     while (this.accumulator >= this.fixedStep && steps < this.maxCatchUp) {
-      this.walk((u, dt) => u.tick(dt), this.fixedStep);
+      // Timers advance engine-side (before the unit's own tick) so they keep
+      // working in subclasses that override `tick` without calling super.
+      this.walk((u, dt) => {
+        u.advanceTimers(dt);
+        u.tick(dt);
+      }, this.fixedStep);
       this.input.advanceTick();
+      this.activeCamera?.advanceView(this.fixedStep);
       this._time += this.fixedStep;
       this.accumulator -= this.fixedStep;
       steps++;

@@ -61,6 +61,21 @@ export class Vector {
     return len === 0 ? Vector.zero : new Vector(this.x / len, this.y / len);
   }
 
+  /** Linear interpolation toward `v` by `t` (unclamped). */
+  lerp(v: Vector, t: number): Vector {
+    return new Vector(this.x + (v.x - this.x) * t, this.y + (v.y - this.y) * t);
+  }
+
+  /** Angle of this vector in radians (`atan2(y, x)`). */
+  angle(): number {
+    return Math.atan2(this.y, this.x);
+  }
+
+  /** Vector pointing at `rad` radians, optionally scaled to `length`. */
+  static fromAngle(rad: number, length = 1): Vector {
+    return new Vector(Math.cos(rad) * length, Math.sin(rad) * length);
+  }
+
   equals(v: Vector): boolean {
     return this.x === v.x && this.y === v.y;
   }

@@ -80,7 +80,11 @@ Hooks:
 
 The camera transform is applied once, on a viewport element; each wrapper
 carries only its own world transform. A camera move re-renders one element,
-not every unit.
+not every unit. What the viewport inverts is the camera's **view transform**
+(`camera.viewTransform`): its world transform with smoothing, limits, and
+offset resolved into the translation, re-rendered from both the camera's
+transform chain and `viewCenter$` (which fires as the smoothed view advances
+on the fixed clock).
 
 ```html
 <div class="stage">      <!-- real pixels; ResizeObserver sets --u -->
@@ -96,7 +100,7 @@ World transforms are `Matrix2D`s, so shear renders correctly. CSS `matrix()`
 cannot contain `var()`, so each transform splits: the unitless linear part
 (rotation/scale/shear) goes in `matrix()` and the translation goes in
 `translate(calc(n * var(--u)))`, keeping resize a pure CSS reflow. The
-viewport is the mirror image, with the camera's position landing at the
+viewport is the mirror image, with the camera's view center landing at the
 center of the stage.
 
 ## Coordinates and sizing
@@ -118,9 +122,11 @@ never assumes one.
 
 The stage captures DOM keyboard and pointer events and feeds
 `engine.input` through its `feed*` API. Pointer pixels are mapped to world
-coordinates first (divide out `--u`, recenter, apply the camera's world
-transform), so game code never sees a pixel. v1 is keyboard and pointer
-only: no touch, no action mapping.
+coordinates first (divide out `--u`, recenter, apply the camera's view
+transform, so the pointer agrees with what is actually rendered, shake and
+all), so game code never sees a pixel. Single-character keys are normalized
+to lowercase by `Input` itself, so Shift can't split `"j"`/`"J"` into two
+keys. v1 is keyboard and pointer only: no touch, no action mapping.
 
 ## Animation: bring your own
 
@@ -150,7 +156,11 @@ Rules of the road:
   React + GSAP ref patterns apply). Never target the compositor's wrapper,
   viewport, or stage elements: it owns their `transform`/`z-index` and will
   clobber external writes.
-- Kill tweens when a unit dies: `onDestroy() { gsap.killTweensOf(this) }`.
+- Kill tweens when a unit dies: `onDestroy() { gsap.killTweensOf(this) }`,
+  or from outside the class via the event:
+  `unit.onDestroyed.addListener(() => gsap.killTweensOf(unit))`.
+- Shake the camera through `camera.offset`, not `camera.position`: offset is
+  exempt from smoothing and limits, so juice never fights the follow logic.
 - Tween clocks are independent of the engine. Pausing the engine does not
   pause tweens; drive your library's ticker from `deviceTick` if you need
   game-time-synced animation.

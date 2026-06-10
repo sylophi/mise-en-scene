@@ -7,6 +7,15 @@ export interface KeyInput {
   key: string;
 }
 
+/**
+ * Keys identify the physical key, not the produced character: single-character
+ * keys are lowercased so `"j"` and Shift's `"J"` are the same key (and a key
+ * held across a Shift press/release can't get stuck down). Named keys
+ * (`"ArrowUp"`, `"Enter"`) pass through unchanged.
+ */
+const normalizeKey = (key: string): string =>
+  key.length === 1 ? key.toLowerCase() : key;
+
 /** Neutral pointer payload (not a DOM event). Position is in world coords. */
 export interface PointerInput {
   position: Vector;
@@ -41,17 +50,19 @@ export class Input {
   // ── Polling ──────────────────────────────────────────────────────────────
 
   isDown(key: string): boolean {
-    return this.down.has(key);
+    return this.down.has(normalizeKey(key));
   }
 
   /** True only on the tick the key transitioned to down. */
   justPressed(key: string): boolean {
-    return this.down.has(key) && !this.prevDown.has(key);
+    const k = normalizeKey(key);
+    return this.down.has(k) && !this.prevDown.has(k);
   }
 
   /** True only on the tick the key transitioned to up. */
   justReleased(key: string): boolean {
-    return !this.down.has(key) && this.prevDown.has(key);
+    const k = normalizeKey(key);
+    return !this.down.has(k) && this.prevDown.has(k);
   }
 
   isButtonDown(button: number): boolean {
@@ -61,15 +72,17 @@ export class Input {
   // ── Feed API (called by the adapter, not game code) ───────────────────────
 
   feedKeyDown(key: string): void {
-    if (this.down.has(key)) return; // ignore auto-repeat
-    this.down.add(key);
-    this.onKeyDown.fire({ key });
+    const k = normalizeKey(key);
+    if (this.down.has(k)) return; // ignore auto-repeat
+    this.down.add(k);
+    this.onKeyDown.fire({ key: k });
   }
 
   feedKeyUp(key: string): void {
-    if (!this.down.has(key)) return;
-    this.down.delete(key);
-    this.onKeyUp.fire({ key });
+    const k = normalizeKey(key);
+    if (!this.down.has(k)) return;
+    this.down.delete(k);
+    this.onKeyUp.fire({ key: k });
   }
 
   feedPointerMove(position: Vector): void {

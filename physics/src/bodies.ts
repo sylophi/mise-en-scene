@@ -13,7 +13,9 @@ import {
  * An immovable body: platforms, walls, the floor. Its transform is read once
  * on tree enter; moving a live static body does not move its colliders.
  */
-export class StaticBody2D extends CollisionObject2D {
+export class StaticBody2D<
+  P extends CollisionObject2DProps = CollisionObject2DProps,
+> extends CollisionObject2D<P> {
   protected createBodyDesc(): RigidBodyDesc {
     return RigidBodyDesc.fixed();
   }
@@ -37,13 +39,15 @@ export interface CharacterBody2DProps extends CollisionObject2DProps {
  * down the screen). Tune the underlying `controller` directly for autostep,
  * snap-to-ground, or slope limits.
  */
-export class CharacterBody2D extends CollisionObject2D {
+export class CharacterBody2D<
+  P extends CharacterBody2DProps = CharacterBody2DProps,
+> extends CollisionObject2D<P> {
   private readonly offset: number;
   private _controller: KinematicCharacterController | null = null;
 
-  constructor(props: CharacterBody2DProps = {}) {
+  constructor(props?: NoInfer<P>) {
     super(props);
-    this.offset = props.offset ?? 0.05;
+    this.offset = props?.offset ?? 0.05;
   }
 
   /** The Rapier character controller, while live in a physics world. */

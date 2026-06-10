@@ -27,7 +27,9 @@ export interface CollisionObject2DProps extends Unit2DProps {
  * Colliders follow only the translation and rotation of the world transform:
  * rigid bodies cannot scale or shear, so keep physics units unscaled.
  */
-export abstract class CollisionObject2D extends Unit2D {
+export abstract class CollisionObject2D<
+  P extends CollisionObject2DProps = CollisionObject2DProps,
+> extends Unit2D<P> {
   readonly layer: number;
   readonly mask: number;
 
@@ -35,10 +37,10 @@ export abstract class CollisionObject2D extends Unit2D {
   private _body: RigidBody | null = null;
   private readonly shapeColliders = new Map<CollisionShape2D, Collider>();
 
-  constructor(props: CollisionObject2DProps = {}) {
+  constructor(props?: NoInfer<P>) {
     super(props);
-    this.layer = props.layer ?? 1;
-    this.mask = props.mask ?? 0xffff;
+    this.layer = props?.layer ?? 1;
+    this.mask = props?.mask ?? 0xffff;
   }
 
   /** The Rapier rigid body, while live in a physics world. */
@@ -152,11 +154,13 @@ export interface CollisionShape2DProps extends Unit2DProps {
  * direct child; its local position and rotation offset the shape within the
  * body. A body may carry several.
  */
-export class CollisionShape2D extends Unit2D {
+export class CollisionShape2D<
+  P extends CollisionShape2DProps = CollisionShape2DProps,
+> extends Unit2D<P> {
   readonly shape: Shape;
   private owner: CollisionObject2D | null = null;
 
-  constructor(props: CollisionShape2DProps) {
+  constructor(props: NoInfer<P>) {
     super(props);
     this.shape = props.shape;
   }

@@ -2,7 +2,9 @@ import { Unit2D, type Unit2DProps, ObservableValue } from "@mise/core";
 import type { ReactNode } from "react";
 
 /** A view function for a renderable. Receives the unit instance as its only prop. */
-export type RenderableView<T extends Renderable> = (props: {
+// oxlint-disable-next-line no-explicit-any -- `any` keeps the self-referential
+// `component: RenderableView<this>` valid for every props parameterization.
+export type RenderableView<T extends Renderable<any>> = (props: {
   unit: T;
 }) => ReactNode;
 
@@ -16,7 +18,9 @@ export interface RenderableProps extends Unit2DProps {
  * subclass (via the polymorphic `this` type), so it gets a fully-typed `unit`.
  * It is position-agnostic; the compositor places it.
  */
-export abstract class Renderable extends Unit2D {
+export abstract class Renderable<
+  P extends RenderableProps = RenderableProps,
+> extends Unit2D<P> {
   /** The view. Defined by each subclass; receives `{ unit: this }`. */
   abstract readonly component: RenderableView<this>;
 
@@ -31,8 +35,8 @@ export abstract class Renderable extends Unit2D {
     this.z$.set(v);
   }
 
-  constructor(props: RenderableProps = {}) {
+  constructor(props?: NoInfer<P>) {
     super(props);
-    this.z$ = new ObservableValue(props.z ?? 0);
+    this.z$ = new ObservableValue(props?.z ?? 0);
   }
 }

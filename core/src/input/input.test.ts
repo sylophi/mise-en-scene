@@ -35,6 +35,37 @@ describe("Input polling", () => {
   });
 });
 
+describe("key normalization", () => {
+  it("treats a key and its shifted character as the same key", () => {
+    const input = new Input();
+    input.feedKeyDown("J");
+    expect(input.isDown("j")).toBe(true);
+    expect(input.isDown("J")).toBe(true);
+    expect(input.justPressed("j")).toBe(true);
+  });
+
+  it("cannot get a key stuck down across a Shift press", () => {
+    const input = new Input();
+    input.feedKeyDown("j"); // pressed plain
+    input.feedKeyUp("J"); // released while Shift is held
+    expect(input.isDown("j")).toBe(false);
+  });
+
+  it("passes named keys through unchanged", () => {
+    const input = new Input();
+    input.feedKeyDown("ArrowUp");
+    expect(input.isDown("ArrowUp")).toBe(true);
+  });
+
+  it("fires events with the normalized key", () => {
+    const input = new Input();
+    const keys: string[] = [];
+    input.onKeyDown.addListener((e) => keys.push(e.key));
+    input.feedKeyDown("J");
+    expect(keys).toEqual(["j"]);
+  });
+});
+
 describe("Input events & pointer", () => {
   it("fires key events with payloads", () => {
     const input = new Input();

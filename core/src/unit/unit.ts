@@ -1,9 +1,23 @@
-import { ObservableEvent } from "../primitives/observable-event.ts";
+import { ObservableEvent, type Unsub } from "../primitives/observable-event.ts";
+import { Cooldown } from "./cooldown.ts";
 import type { Engine } from "../engine/engine.ts";
 
 export interface UnitProps {
   /** Stable id. Auto-generated if omitted. */
   id?: string;
+}
+
+/** Anything observable: `ObservableValue`, `ObservableEvent`, or compatible. */
+interface ObservableLike<T> {
+  addListener(cb: (value: T) => void): Unsub;
+}
+
+/** A scheduled callback created by `after`/`every`. */
+interface ScheduledTimer {
+  remaining: number;
+  /** Repeat period in seconds; null for one-shots. */
+  interval: number | null;
+  cb: () => void;
 }
 
 let nextId = 1;
@@ -17,19 +31,32 @@ let nextId = 1;
  * attached subtree, and clears on detach. A currently bound subtree can never
  * be attached into a different engine's tree.
  */
-export class Unit {
+export class Unit<P extends UnitProps = UnitProps> {
   readonly id: string;
+
+  /**
+   * The constructor props, retained verbatim. Subclasses that only pass values
+   * through to their views can read these instead of copying fields:
+   * `class Billboard extends Renderable<BillboardProps>` makes
+   * `this.props.title` fully typed with no constructor at all.
+   */
+  protected readonly props: P;
 
   private _parent: Unit | null = null;
   // Allocated lazily: most units (bullets, timers, spawners) never have a
   // structural observer, and units are a per-frame spawn hot path.
   private _onParentChanged: ObservableEvent<Unit | null> | null = null;
+  private _onDestroyed: ObservableEvent<void> | null = null;
+  private _observations: Unsub[] | null = null;
+  private _schedule: ScheduledTimer[] | null = null;
+  private _cooldowns: Cooldown[] | null = null;
   private readonly _children: Unit[] = [];
   protected _engine: Engine | null = null;
   private _destroyed = false;
 
-  constructor(props: UnitProps = {}) {
-    this.id = props.id ?? `unit-${nextId++}`;
+  constructor(props?: NoInfer<P>) {
+    this.props = props ?? ({} as P);
+    this.id = this.props.id ?? `unit-${nextId++}`;
   }
 
   // ── Tree ────────────────────────────────────────────────────────────────
@@ -46,6 +73,15 @@ export class Unit {
    */
   get onParentChanged(): ObservableEvent<Unit | null> {
     return (this._onParentChanged ??= new ObservableEvent());
+  }
+
+  /**
+   * Fires once, after the unit is destroyed (children already destroyed,
+   * `onDestroy` already run). The hook for external cleanup tied to this
+   * unit's lifetime, e.g. `unit.onDestroyed.addListener(() => gsap.killTweensOf(unit))`.
+   */
+  get onDestroyed(): ObservableEvent<void> {
+    return (this._onDestroyed ??= new ObservableEvent());
   }
 
   get children(): readonly Unit[] {
@@ -150,7 +186,9 @@ export class Unit {
 
   /**
    * Remove from the tree and destroy this unit and all descendants, bottom-up:
-   * children are destroyed first, then this unit's `onDestroy` fires.
+   * children are destroyed first, then this unit's `onDestroy` fires. All
+   * subscriptions made via `observeUntilDestroyed` and all pending timers are
+   * disposed.
    */
   destroy(): void {
     if (this._destroyed) return;
@@ -165,6 +203,119 @@ export class Unit {
 
     this._destroyed = true;
     this.onDestroy();
+    this._onDestroyed?.fire();
+    this._onDestroyed = null;
+    if (this._observations) {
+      for (const unsub of this._observations) unsub();
+      this._observations = null;
+    }
+    this._schedule = null;
+    this._cooldowns = null;
+  }
+
+  // ── Lifetime-scoped subscriptions ─────────────────────────────────────────
+
+  /**
+   * Subscribe to `observable` for this unit's lifetime: the subscription is
+   * disposed automatically on `destroy`. Mirrors Godot, where freeing a node
+   * severs its signal connections; removing the unit from the tree does *not*
+   * unsubscribe (callbacks can fire while off-tree, where `engine` is null).
+   *
+   * Returns the unsubscribe function for early opt-out.
+   */
+  observeUntilDestroyed<T>(
+    observable: ObservableLike<T>,
+    cb: (value: T) => void,
+  ): Unsub {
+    if (this._destroyed) {
+      throw new Error("cannot observe from a destroyed unit");
+    }
+    const unsub = observable.addListener(cb);
+    (this._observations ??= []).push(unsub);
+    return unsub;
+  }
+
+  // ── Timers (advance on the fixed tick; engine-driven) ─────────────────────
+
+  /**
+   * Run `cb` once after `delay` seconds of fixed-tick time. Frozen while the
+   * unit is off-tree (timers advance only when the unit ticks); cancelled by
+   * `destroy`. Returns a cancel function.
+   */
+  after(delay: number, cb: () => void): Unsub {
+    return this._addTimer(delay, null, cb);
+  }
+
+  /**
+   * Run `cb` every `interval` seconds of fixed-tick time, first fire after one
+   * full interval. Frozen while the unit is off-tree; cancelled by `destroy`.
+   * Returns a cancel function.
+   */
+  every(interval: number, cb: () => void): Unsub {
+    if (!(interval > 0)) throw new Error("every() needs a positive interval");
+    return this._addTimer(interval, interval, cb);
+  }
+
+  /**
+   * Create a {@link Cooldown} advanced on this unit's fixed-tick clock.
+   * `cooldown.ready` / `cooldown.start()` replace the hand-rolled
+   * `cd -= dt; if (cd <= 0) ...` pattern.
+   */
+  cooldown(duration: number): Cooldown {
+    if (this._destroyed) {
+      throw new Error("cannot create a cooldown on a destroyed unit");
+    }
+    const cd = new Cooldown(duration);
+    (this._cooldowns ??= []).push(cd);
+    return cd;
+  }
+
+  private _addTimer(
+    delay: number,
+    interval: number | null,
+    cb: () => void,
+  ): Unsub {
+    if (this._destroyed) {
+      throw new Error("cannot schedule a timer on a destroyed unit");
+    }
+    if (!(delay >= 0)) throw new Error("timer delay must be >= 0");
+    const timer: ScheduledTimer = { remaining: delay, interval, cb };
+    (this._schedule ??= []).push(timer);
+    return () => {
+      this._removeTimer(timer);
+    };
+  }
+
+  private _removeTimer(timer: ScheduledTimer): void {
+    if (!this._schedule) return;
+    const i = this._schedule.indexOf(timer);
+    if (i >= 0) this._schedule.splice(i, 1);
+  }
+
+  /** Advance timers and cooldowns by `dt`. Called by the engine; not game API. */
+  advanceTimers(dt: number): void {
+    if (this._cooldowns) {
+      for (const cd of this._cooldowns) cd.advance(dt);
+    }
+    if (!this._schedule || this._schedule.length === 0) return;
+    // Snapshot: callbacks may schedule or cancel timers (or destroy the unit).
+    for (const timer of this._schedule.slice()) {
+      if (!this._schedule?.includes(timer)) continue; // cancelled mid-step
+      timer.remaining -= dt;
+      if (timer.remaining > 0) continue;
+      if (timer.interval === null) {
+        this._removeTimer(timer); // remove first: cb may reschedule
+        timer.cb();
+      } else {
+        // Catch up if dt overshot multiple periods; stop if cancelled/destroyed.
+        let active = true;
+        while (timer.remaining <= 0 && active) {
+          timer.remaining += timer.interval;
+          timer.cb();
+          active = this._schedule?.includes(timer) ?? false;
+        }
+      }
+    }
   }
 
   // ── Lifecycle hooks (override in subclasses) ─────────────────────────────

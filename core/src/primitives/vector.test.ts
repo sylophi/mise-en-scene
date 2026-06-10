@@ -50,4 +50,23 @@ describe("Vector", () => {
     v.add(new Vector(9, 9));
     expect(v.equals(new Vector(1, 1))).toBe(true);
   });
+
+  it("lerp interpolates toward the target, unclamped", () => {
+    expect(
+      new Vector(0, 0).lerp(new Vector(10, 20), 0.5).equals(new Vector(5, 10)),
+    ).toBe(true);
+    expect(
+      new Vector(0, 0).lerp(new Vector(10, 0), 1.5).equals(new Vector(15, 0)),
+    ).toBe(true);
+  });
+
+  it("angle and fromAngle round-trip", () => {
+    expect(new Vector(0, 1).angle()).toBeCloseTo(Math.PI / 2);
+    const v = Vector.fromAngle(Math.PI / 2, 3);
+    expect(v.x).toBeCloseTo(0);
+    expect(v.y).toBeCloseTo(3);
+    expect(Vector.fromAngle(new Vector(-2, 2).angle()).angle()).toBeCloseTo(
+      new Vector(-2, 2).angle(),
+    );
+  });
 });
