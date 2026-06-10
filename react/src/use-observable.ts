@@ -7,7 +7,7 @@ import type { ObservableValue } from "@mise/core";
  * tear-free via `useSyncExternalStore`.
  *
  * `ObservableValue` only fires on a real change (it skips `===`-equal sets), so
- * the snapshot reference is stable between renders — no extra memoization needed.
+ * the snapshot reference is stable between renders; no extra memoization needed.
  */
 export function useObservable<T>(ov: ObservableValue<T>): T {
   const subscribe = useCallback(

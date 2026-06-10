@@ -11,10 +11,11 @@ let nextId = 1;
 /**
  * Base unit. Ticks, holds reactive state, and lives in a tree. Invisible by itself.
  *
- * A unit is bound to exactly one {@link Engine}, permanently. Binding is inherited
- * from the parent on {@link addChild} and propagates down the attached subtree.
- * A unit is "live" (in the tree, ticked, lifecycle-active) exactly when it is bound
- * to an engine — i.e. connected up to a {@link Root} that has an engine.
+ * A unit is "live" (in the tree, ticked, lifecycle-active) exactly when it is
+ * bound to an {@link Engine}, i.e. connected up to a {@link Root} that has one.
+ * Binding is inherited from the parent on {@link addChild}, propagates down the
+ * attached subtree, and clears on detach. A currently bound subtree can never
+ * be attached into a different engine's tree.
  */
 export class Unit {
   readonly id: string;
@@ -54,7 +55,7 @@ export class Unit {
   /**
    * The engine this unit is bound to. Typed non-null for ergonomics: every
    * live unit has one, and tick/lifecycle code is the intended call site.
-   * Reading it on a treeless/detached unit returns null at runtime — doing
+   * Reading it on a treeless/detached unit returns null at runtime; doing
    * so is a bug in the caller. (Check `isLive` if genuinely unsure.)
    */
   get engine(): Engine {

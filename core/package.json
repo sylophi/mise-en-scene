@@ -1,6 +1,7 @@
 {
   "name": "@mise/core",
   "version": "0.0.0",
+  "description": "Headless 2D game engine: scene tree, fixed/device loops, input, reactive state. No DOM, no dependencies.",
   "type": "module",
   "main": "./src/index.ts",
   "module": "./src/index.ts",

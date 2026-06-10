@@ -14,7 +14,7 @@ export { Root } from "./unit/root.ts";
 export { Engine, type EngineOptions } from "./engine/engine.ts";
 
 // Input
-export { Input, type KeyEvent, type PointerEvent } from "./input/input.ts";
+export { Input, type KeyInput, type PointerInput } from "./input/input.ts";
 
 // Scene composition
 export { mes } from "./scene/mes.ts";

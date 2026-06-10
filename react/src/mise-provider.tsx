@@ -16,7 +16,7 @@ export interface MiseProviderProps {
 /**
  * Provides the engine via context and renders its world (the compositor).
  *
- * The engine runs independently of React — it is injected, not created here, and
+ * The engine runs independently of React: it is injected, not created here, and
  * controls its own start/stop. This component only observes and draws it.
  */
 export function MiseProvider({

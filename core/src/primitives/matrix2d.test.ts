@@ -36,7 +36,7 @@ describe("Matrix2D", () => {
     const child = Matrix2D.fromTRS(Vector.zero, Math.PI / 4, Vector.one);
     const m = parent.multiply(child);
     const c = Math.SQRT1_2;
-    // basis vectors rotate 45°, then stretch 2x along world x only —
+    // basis vectors rotate 45°, then stretch 2x along world x only;
     // afterwards they are no longer perpendicular (sheared)
     expectVec(m.apply(new Vector(1, 0)), 2 * c, c);
     expectVec(m.apply(new Vector(0, 1)), -2 * c, c);

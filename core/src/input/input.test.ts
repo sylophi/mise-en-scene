@@ -49,7 +49,7 @@ describe("Input events & pointer", () => {
     let moved: Vector | null = null;
     input.onPointerMove.addListener((e) => (moved = e.position));
     input.feedPointerMove(new Vector(3, 4));
-    expect(input.pointer.get().equals(new Vector(3, 4))).toBe(true);
+    expect(input.pointer.equals(new Vector(3, 4))).toBe(true);
     expect(moved!.equals(new Vector(3, 4))).toBe(true);
   });
 

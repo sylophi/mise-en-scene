@@ -14,17 +14,25 @@ export interface RenderableProps extends Unit2DProps {
 /**
  * A `Unit2D` that draws via a React component. The `component` is typed to the
  * subclass (via the polymorphic `this` type), so it gets a fully-typed `unit`.
- * It is position-agnostic — the compositor places it.
+ * It is position-agnostic; the compositor places it.
  */
 export abstract class Renderable extends Unit2D {
   /** The view. Defined by each subclass; receives `{ unit: this }`. */
   abstract readonly component: RenderableView<this>;
 
+  /** Channel behind `z`. The compositor subscribes to this. */
+  readonly z$: ObservableValue<number>;
+
   /** Z layer. Draw order sorts by layer first, tree order within a layer. */
-  readonly z: ObservableValue<number>;
+  get z(): number {
+    return this.z$.get();
+  }
+  set z(v: number) {
+    this.z$.set(v);
+  }
 
   constructor(props: RenderableProps = {}) {
     super(props);
-    this.z = new ObservableValue(props.z ?? 0);
+    this.z$ = new ObservableValue(props.z ?? 0);
   }
 }

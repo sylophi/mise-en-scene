@@ -29,7 +29,7 @@ describe("mes", () => {
     const p = mes(Player, { hp: 100, position: new Vector(1, 2) });
     expect(p).toBeInstanceOf(Player);
     expect(p.hp).toBe(100);
-    expect(p.position.get().equals(new Vector(1, 2))).toBe(true);
+    expect(p.position.equals(new Vector(1, 2))).toBe(true);
     expect(p.isLive).toBe(false); // treeless until mounted
   });
 

@@ -50,7 +50,7 @@ export class Vector {
     return Math.hypot(this.x, this.y);
   }
 
-  /** Squared length — avoids the sqrt when only comparing magnitudes. */
+  /** Squared length: avoids the sqrt when only comparing magnitudes. */
   lengthSquared(): number {
     return this.x * this.x + this.y * this.y;
   }

@@ -14,7 +14,7 @@ export function entityTransformCss(m: Matrix2D): string {
 }
 
 /**
- * CSS transform for the viewport — the inverse of the camera's world
+ * CSS transform for the viewport: the inverse of the camera's world
  * transform, applied once so a camera move re-renders one element, not every
  * entity. `M⁻¹ = L⁻¹ · T⁻¹`: the translation undoes first (rightmost), then
  * the inverted linear part.
@@ -41,8 +41,8 @@ export function screenToWorld(
   camera: Camera,
 ): Vector {
   const view = new Vector(
-    (clientX - stageLeft) / (u || 1) - camera.width.get() / 2,
-    (clientY - stageTop) / (u || 1) - camera.height.get() / 2,
+    (clientX - stageLeft) / (u || 1) - camera.width / 2,
+    (clientY - stageTop) / (u || 1) - camera.height / 2,
   );
   return camera.worldTransform.apply(view);
 }

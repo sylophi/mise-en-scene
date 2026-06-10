@@ -24,9 +24,9 @@ const now = (): number => performance.now();
 /**
  * Owns the root unit and drives the simulation. Two loops:
  *
- * - `tick` — fixed-step (default 60Hz) via `setInterval`, real-time corrected with
+ * - `tick`: fixed-step (default 60Hz) via `setInterval`, real-time corrected with
  *   an accumulator and a catch-up cap. The canonical simulation clock.
- * - `deviceTick` — variable-step via `requestAnimationFrame` (when available),
+ * - `deviceTick`: variable-step via `requestAnimationFrame` (when available),
  *   at the device refresh rate.
  *
  * Both walk the live tree depth-first, top-down, every cycle.
@@ -34,16 +34,25 @@ const now = (): number => performance.now();
 export class Engine {
   readonly root: Root;
   readonly input = new Input();
-  readonly activeCamera = new ObservableValue<Camera | null>(null);
+  /** Channel behind `activeCamera`. Renderers subscribe to this. */
+  readonly activeCamera$ = new ObservableValue<Camera | null>(null);
 
-  /** Fires when a unit enters the live tree (top-down). For retained renderers. */
+  /** The camera the world is viewed through. Assignment fires `activeCamera$`. */
+  get activeCamera(): Camera | null {
+    return this.activeCamera$.get();
+  }
+  set activeCamera(camera: Camera | null) {
+    this.activeCamera$.set(camera);
+  }
+
+  /** Fires when a unit enters the live tree (top-down). */
   readonly onUnitEnter = new ObservableEvent<Unit>();
-  /** Fires when a unit leaves the live tree (bottom-up). For retained renderers. */
+  /** Fires when a unit leaves the live tree (bottom-up). */
   readonly onUnitExit = new ObservableEvent<Unit>();
   /**
    * Fires when a unit moves within the live tree (same-engine reparent), which
    * fires no enter/exit. The moved unit may be an invisible ancestor whose
-   * whole subtree shifted with it; retained renderers refresh draw order here.
+   * whole subtree shifted with it.
    */
   readonly onUnitMoved = new ObservableEvent<Unit>();
 

@@ -35,7 +35,7 @@ describe("ObservableEvent", () => {
     let count = 0;
     ev.addListener(() => {
       count++;
-      ev.clear(); // remove during dispatch — must not throw
+      ev.clear(); // remove during dispatch; must not throw
     });
     expect(() => ev.fire()).not.toThrow();
     expect(count).toBe(1);

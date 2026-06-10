@@ -15,6 +15,7 @@
       "error",
       { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
     ],
+    "grouped-accessor-pairs": ["error", "getBeforeSet"],
     "import/no-unassigned-import": ["error", { "allow": ["**/*.css"] }],
     "react/react-in-jsx-scope": "off",
     "no-underscore-dangle": "off",

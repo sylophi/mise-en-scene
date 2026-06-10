@@ -6,9 +6,22 @@ import { Vector } from "../primitives/vector.ts";
 describe("Unit2D transform", () => {
   it("defaults to zero position, zero rotation, unit scale", () => {
     const u = new Unit2D();
-    expect(u.position.get().equals(Vector.zero)).toBe(true);
-    expect(u.rotation.get()).toBe(0);
-    expect(u.scale.get().equals(Vector.one)).toBe(true);
+    expect(u.position.equals(Vector.zero)).toBe(true);
+    expect(u.rotation).toBe(0);
+    expect(u.scale.equals(Vector.one)).toBe(true);
+  });
+
+  it("accessors write through to the channels", () => {
+    const u = new Unit2D();
+    const seen: number[] = [];
+    u.rotation$.addListener((v) => seen.push(v));
+    u.rotation += 0.5; // compound assignment fires the channel
+    u.rotation += 0.5;
+    const unchanged = u.rotation;
+    u.rotation = unchanged; // === skip: no fire
+    expect(seen).toEqual([0.5, 1]);
+    u.position = u.position.add(new Vector(2, 0));
+    expect(u.position.equals(new Vector(2, 0))).toBe(true);
   });
 
   it("composes world position by translation", () => {
@@ -45,7 +58,7 @@ describe("Unit2D transform", () => {
     const child = new Unit2D({ rotation: Math.PI / 2 });
     parent.addChild(child);
     // (1,0) rotates 90° to (0,1); the parent stretches x only, so it stays
-    // (0,1). The old TRS composition produced (0,2) — scale leaked onto the
+    // (0,1). The old TRS composition produced (0,2): scale leaked onto the
     // rotated axis.
     const p = child.worldTransform.apply(new Vector(1, 0));
     expect(p.x).toBeCloseTo(0);

@@ -1,6 +1,7 @@
 {
   "name": "@mise/react",
   "version": "0.0.0",
+  "description": "React DOM renderer for Mise en Scène: every entity is a React component. No canvas.",
   "type": "module",
   "main": "./src/index.ts",
   "module": "./src/index.ts",

@@ -2,13 +2,13 @@ import { ObservableEvent } from "../primitives/observable-event.ts";
 import { ObservableValue } from "../primitives/observable-value.ts";
 import { Vector } from "../primitives/vector.ts";
 
-/** Neutral key event payload (not a DOM event). */
-export interface KeyEvent {
+/** Neutral key payload (not a DOM event; doesn't shadow DOM types). */
+export interface KeyInput {
   key: string;
 }
 
-/** Neutral pointer event payload (not a DOM event). Position is in world coords. */
-export interface PointerEvent {
+/** Neutral pointer payload (not a DOM event). Position is in world coords. */
+export interface PointerInput {
   position: Vector;
   button?: number;
 }
@@ -20,14 +20,19 @@ export interface PointerEvent {
  */
 export class Input {
   // Events
-  readonly onKeyDown = new ObservableEvent<KeyEvent>();
-  readonly onKeyUp = new ObservableEvent<KeyEvent>();
-  readonly onPointerDown = new ObservableEvent<PointerEvent>();
-  readonly onPointerUp = new ObservableEvent<PointerEvent>();
-  readonly onPointerMove = new ObservableEvent<PointerEvent>();
+  readonly onKeyDown = new ObservableEvent<KeyInput>();
+  readonly onKeyUp = new ObservableEvent<KeyInput>();
+  readonly onPointerDown = new ObservableEvent<PointerInput>();
+  readonly onPointerUp = new ObservableEvent<PointerInput>();
+  readonly onPointerMove = new ObservableEvent<PointerInput>();
 
-  /** Pointer position in world coordinates. */
-  readonly pointer = new ObservableValue<Vector>(Vector.zero);
+  /** Channel behind `pointer`. Subscribe to this. */
+  readonly pointer$ = new ObservableValue<Vector>(Vector.zero);
+
+  /** Pointer position in world coordinates. Fed by the adapter, so read-only. */
+  get pointer(): Vector {
+    return this.pointer$.get();
+  }
 
   private down = new Set<string>();
   private prevDown = new Set<string>();
@@ -68,21 +73,18 @@ export class Input {
   }
 
   feedPointerMove(position: Vector): void {
-    this.pointer.set(position);
+    this.pointer$.set(position);
     this.onPointerMove.fire({ position });
   }
 
   feedPointerDown(button: number, position?: Vector): void {
     this.buttons.add(button);
-    this.onPointerDown.fire({
-      position: position ?? this.pointer.get(),
-      button,
-    });
+    this.onPointerDown.fire({ position: position ?? this.pointer, button });
   }
 
   feedPointerUp(button: number, position?: Vector): void {
     this.buttons.delete(button);
-    this.onPointerUp.fire({ position: position ?? this.pointer.get(), button });
+    this.onPointerUp.fire({ position: position ?? this.pointer, button });
   }
 
   /** Called by the engine at each tick boundary to roll over just-pressed state. */

@@ -19,17 +19,32 @@ export interface CameraProps extends Unit2DProps {
  * Only one camera is active at a time; the active one is held by the engine.
  */
 export class Camera extends Unit2D {
-  readonly width: ObservableValue<number>;
-  readonly height: ObservableValue<number>;
+  /** Logical viewport width in camera units. Assignment fires `width$`. */
+  readonly width$: ObservableValue<number>;
+  get width(): number {
+    return this.width$.get();
+  }
+  set width(v: number) {
+    this.width$.set(v);
+  }
+
+  /** Logical viewport height in camera units. Assignment fires `height$`. */
+  readonly height$: ObservableValue<number>;
+  get height(): number {
+    return this.height$.get();
+  }
+  set height(v: number) {
+    this.height$.set(v);
+  }
 
   constructor(props: CameraProps) {
     super(props);
-    this.width = new ObservableValue(props.width);
-    this.height = new ObservableValue(props.height);
+    this.width$ = new ObservableValue(props.width);
+    this.height$ = new ObservableValue(props.height);
   }
 
   /** Aspect ratio (width / height) the render surface should lock to. */
   get aspect(): number {
-    return this.width.get() / this.height.get();
+    return this.width / this.height;
   }
 }

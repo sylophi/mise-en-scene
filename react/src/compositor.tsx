@@ -39,7 +39,7 @@ function collectRenderables(root: Unit): Renderable[] {
 
 /**
  * The live list of renderables in tree (draw) order. Crawls once, then stays in
- * sync via the engine's unit enter/exit events — never re-crawls per frame.
+ * sync via the engine's unit enter/exit events; never re-crawls per frame.
  */
 function useRenderables(engine: Engine): Renderable[] {
   const [list, setList] = useState<Renderable[]>(() =>
@@ -100,9 +100,9 @@ function useWorldTransform(unit: Unit2D): Matrix2D {
     };
     const subscribe = (): void => {
       for (let u: Unit | null = unit; u instanceof Unit2D; u = u.parent) {
-        unsubs.push(u.position.addListener(bump));
-        unsubs.push(u.rotation.addListener(bump));
-        unsubs.push(u.scale.addListener(bump));
+        unsubs.push(u.position$.addListener(bump));
+        unsubs.push(u.rotation$.addListener(bump));
+        unsubs.push(u.scale$.addListener(bump));
         unsubs.push(u.onParentChanged.addListener(onChainChanged));
       }
     };
@@ -127,7 +127,7 @@ const EntityView = memo(function EntityView({
   order: number;
 }): ReactNode {
   const transform = useWorldTransform(unit);
-  const z = useObservable(unit.z);
+  const z = useObservable(unit.z$);
   // Memoize the view so transform-only re-renders of the wrapper don't re-run it.
   const View = useMemo(() => memo(unit.component), [unit.component]);
 
@@ -188,8 +188,8 @@ function Stage({
   engine: Engine;
   camera: Camera;
 }): ReactNode {
-  const camW = useObservable(camera.width);
-  const camH = useObservable(camera.height);
+  const camW = useObservable(camera.width$);
+  const camH = useObservable(camera.height$);
   const renderables = useRenderables(engine);
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -203,14 +203,13 @@ function Stage({
     const fit = (): void => {
       const cw = container.clientWidth;
       const ch = container.clientHeight;
-      const aspect = camera.width.get() / camera.height.get();
       let w = cw;
-      let h = cw / aspect;
+      let h = cw / camera.aspect;
       if (h > ch) {
         h = ch;
-        w = ch * aspect;
+        w = ch * camera.aspect;
       }
-      uRef.current = w / camera.width.get();
+      uRef.current = w / camera.width;
       setBox({ w, h, u: uRef.current });
     };
     fit();
@@ -285,7 +284,7 @@ function Stage({
 /** The compositor: renders the engine's renderables through the active camera. */
 export function Compositor(): ReactNode {
   const engine = useEngine();
-  const camera = useObservable(engine.activeCamera);
+  const camera = useObservable(engine.activeCamera$);
   if (!camera) {
     return <div style={containerStyle} data-mise-stage="" />;
   }

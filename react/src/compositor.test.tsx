@@ -22,9 +22,9 @@ class Box extends Renderable {
 }
 
 class Counter extends Renderable {
-  readonly count = new ObservableValue(0);
+  readonly count$ = new ObservableValue(0);
   readonly component = ({ unit }: { unit: Counter }) => {
-    const c = useObservable(unit.count);
+    const c = useObservable(unit.count$);
     return <div data-testid="count">{c}</div>;
   };
 }
@@ -33,7 +33,7 @@ function makeEngine(scene?: Unit): Engine {
   const engine = new Engine({ autoStart: false });
   const camera = new Camera({ width: 100, height: 100 });
   engine.root.addChild(camera);
-  engine.activeCamera.set(camera);
+  engine.activeCamera = camera;
   if (scene) engine.changeScene(scene);
   return engine;
 }
@@ -62,7 +62,7 @@ describe("compositor", () => {
     const counter = mes(Counter, {});
     render(<MiseProvider engine={makeEngine(counter)} />);
     expect(screen.getByTestId("count").textContent).toBe("0");
-    act(() => counter.count.set(5));
+    act(() => counter.count$.set(5));
     expect(screen.getByTestId("count").textContent).toBe("5");
   });
 
@@ -87,7 +87,7 @@ describe("compositor", () => {
     expect(wrapper?.style.transform).toContain("calc(10 * var(--u))");
     await act(async () => b.addChild(box)); // reparent a → b
     expect(wrapper?.style.transform).toContain("calc(20 * var(--u))");
-    act(() => b.position.set(new Vector(30, 0))); // new chain stays subscribed
+    act(() => (b.position = new Vector(30, 0))); // new chain stays subscribed
     expect(wrapper?.style.transform).toContain("calc(30 * var(--u))");
   });
 
@@ -108,7 +108,7 @@ describe("compositor", () => {
     frame.addChild(box);
     render(<MiseProvider engine={makeEngine(frame)} />);
     const wrapper = screen.getByTestId("box").parentElement;
-    // S·R maps the x-basis to (0,1) and the y-basis to (-2,0) — a sheared
+    // S·R maps the x-basis to (0,1) and the y-basis to (-2,0): a sheared
     // frame no translate/rotate/scale string can express.
     expect(wrapper?.style.transform).toBe(
       entityTransformCss(box.worldTransform),
