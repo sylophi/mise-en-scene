@@ -66,6 +66,23 @@ describe("Engine fixed-step loop", () => {
     expect(order).toEqual(["a", "b", "c"]);
   });
 
+  it("does not tick units detached mid-walk (e.g. a mid-tick changeScene)", () => {
+    const e = new Engine({ autoStart: false, fixedStep: 0.1 });
+    const swapper = new (class extends Unit {
+      override tick(): void {
+        e.changeScene(new Unit()); // destroys the scene this unit lives in
+      }
+    })();
+    const bystander = new Ticker();
+    const scene = new Unit();
+    scene.addChild(swapper);
+    scene.addChild(bystander); // later in the walk than the swapper
+    e.changeScene(scene);
+    e.advanceFixed(0.1);
+    expect(bystander.ticks).toBe(0); // its tree died before its turn
+    expect(scene.destroyed).toBe(true);
+  });
+
   it("deviceTick passes the raw variable dt", () => {
     const e = new Engine({ autoStart: false });
     const d = new DeviceTicker();

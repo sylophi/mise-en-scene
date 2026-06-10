@@ -182,6 +182,9 @@ export class Engine {
   /** Depth-first, top-down walk of the live tree. */
   private walk(fn: (unit: Unit, dt: number) => void, dt: number): void {
     const visit = (u: Unit): void => {
+      // A tick earlier in the walk may have detached this subtree (e.g. a
+      // mid-tick changeScene); only live units are ticked, per the contract.
+      if (!u.isLive) return;
       fn(u, dt);
       // snapshot: a tick may add/remove children mid-walk
       for (const c of u.children.slice()) visit(c);
