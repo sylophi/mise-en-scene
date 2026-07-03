@@ -132,6 +132,34 @@ describe("camera smoothing", () => {
     expect(c.viewTransform.tx).toBe(7); // no advance needed
   });
 
+  it("eases into limits: damps toward the clamped target, never drifting past", () => {
+    const engine = makeEngine();
+    const c = cam({
+      width: 10,
+      height: 10,
+      smoothing: 5,
+      limits: { left: 0, right: 100, top: 0, bottom: 100 },
+      position: new Vector(50, 50),
+    });
+    engine.root.addChild(c);
+    step(engine); // seed at (50, 50)
+    c.position = new Vector(500, 50); // target far beyond the right bound
+    let prev = c.viewCenter.x;
+    let prevDelta = Infinity;
+    for (let i = 0; i < 50; i++) {
+      step(engine);
+      const x = c.viewCenter.x;
+      const delta = x - prev;
+      expect(x).toBeLessThanOrEqual(95); // never past right - width/2
+      // Decelerating approach; the 1e-4 slack allows the final convergence snap.
+      expect(delta).toBeLessThanOrEqual(prevDelta + 1e-4);
+      prev = x;
+      prevDelta = delta;
+    }
+    step(engine, 200);
+    expect(c.viewCenter.x).toBe(95); // converged and snapped at the bound
+  });
+
   it("snaps (never lerps in) when entering the tree", () => {
     const engine = makeEngine();
     const c = cam({ smoothing: 5, position: new Vector(100, 100) });

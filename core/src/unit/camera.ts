@@ -179,7 +179,9 @@ export class Camera<P extends CameraProps = CameraProps> extends Unit2D<P> {
    */
   advanceView(dt: number): void {
     const m = this.worldTransform;
-    const target = new Vector(m.tx, m.ty);
+    // Damp toward the *clamped* target so the view eases into a limit instead
+    // of chasing an unreachable point and hitting the bound at full speed.
+    const target = this.clampToLimits(new Vector(m.tx, m.ty));
     const rate = this.smoothing;
     let next = target;
     if (rate > 0 && this._viewPos) {
