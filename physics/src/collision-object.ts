@@ -71,20 +71,19 @@ export abstract class CollisionObject2D<
 
   override onTreeEnter(parent: Unit | null): void {
     super.onTreeEnter(parent);
-    let u: Unit | null = this.parent;
-    while (u && !(u instanceof PhysicsWorld2D)) u = u.parent;
-    if (!u) {
+    const world = this.findAncestor(PhysicsWorld2D);
+    if (!world) {
       throw new Error(
         `${this.constructor.name} must be a descendant of a PhysicsWorld2D`,
       );
     }
-    this._world = u;
+    this._world = world;
     const wt = this.worldTransform;
     const desc = this.createBodyDesc()
       .setTranslation(wt.tx, wt.ty)
       .setRotation(Math.atan2(wt.b, wt.a));
-    this._body = u.world.createRigidBody(desc);
-    u.register(this);
+    this._body = world.world.createRigidBody(desc);
+    world.register(this);
   }
 
   override onTreeExit(parent: Unit | null): void {
@@ -167,15 +166,14 @@ export class CollisionShape2D<
 
   override onTreeEnter(parent: Unit | null): void {
     super.onTreeEnter(parent);
-    let u: Unit | null = this.parent;
-    while (u && !(u instanceof CollisionObject2D)) u = u.parent;
-    if (!u) {
+    const owner = this.findAncestor(CollisionObject2D);
+    if (!owner) {
       throw new Error(
         "CollisionShape2D must be a descendant of a physics body or area",
       );
     }
-    this.owner = u;
-    u.attachShape(this);
+    this.owner = owner;
+    owner.attachShape(this);
   }
 
   override onTreeExit(parent: Unit | null): void {

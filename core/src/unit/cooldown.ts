@@ -8,7 +8,8 @@
 export class Cooldown {
   private _remaining = 0;
 
-  constructor(private readonly duration: number) {}
+  /** `duration` may be omitted when every `start(d)` passes its own. */
+  constructor(private readonly duration = 0) {}
 
   /** True when the cooldown has fully elapsed (or was never started). */
   get ready(): boolean {

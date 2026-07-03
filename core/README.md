@@ -36,6 +36,7 @@ itself; use plain units for managers, spawners, timers, and controllers.
 | --- | --- |
 | `id` | Stable string, auto-generated unless passed in props. |
 | `parent`, `children`, `root` | Tree accessors. `children` is readonly. |
+| `findAncestor(Ctor)` | Nearest ancestor that is an instance of `Ctor`, or null. How units find a containing system (e.g. a physics body locating its world on tree enter). |
 | `addChild(child)` | Attaches (reparents if needed). Throws on cycles and on cross-engine moves. |
 | `removeChild(child)` | Detaches without destroying. |
 | `destroy()` | Removes from the tree and destroys the subtree bottom-up. Permanent. |

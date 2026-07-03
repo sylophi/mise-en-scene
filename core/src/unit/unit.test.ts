@@ -55,6 +55,21 @@ describe("Unit tree", () => {
     expect(parents).toEqual([a, b, null]);
   });
 
+  it("findAncestor returns the nearest instance of the class, or null", () => {
+    class Zone extends Unit {}
+    const outer = new Zone();
+    const middle = new Unit();
+    const inner = new Zone();
+    const leaf = new Unit();
+    outer.addChild(middle);
+    middle.addChild(inner);
+    inner.addChild(leaf);
+    expect(leaf.findAncestor(Zone)).toBe(inner);
+    expect(middle.findAncestor(Zone)).toBe(outer);
+    expect(outer.findAncestor(Zone)).toBeNull();
+    expect(inner.findAncestor(Zone)).toBe(outer); // self does not count
+  });
+
   it("removeChild detaches without destroying", () => {
     const log: string[] = [];
     const a = new T("a", log);
@@ -168,6 +183,28 @@ describe("engine binding & lifecycle", () => {
     expect(log).toEqual(["exit:b", "exit:a"]);
     expect(a.engine).toBeNull();
     expect(b.isLive).toBe(false);
+  });
+
+  it("moving a live unit under a detached parent exits, reporting the parent left", () => {
+    const log: string[] = [];
+    const e = engine();
+    const a = new T("a", log);
+    e.root.addChild(a);
+
+    const exits: (Unit | null)[] = [];
+    class Reporting extends Unit {
+      override onTreeExit(parent: Unit | null): void {
+        exits.push(parent);
+      }
+    }
+    const child = new Reporting();
+    a.addChild(child);
+
+    const detached = new T("detached", log);
+    detached.addChild(child); // leaves the live tree
+    expect(child.isLive).toBe(false);
+    expect(child.parent).toBe(detached);
+    expect(exits).toEqual([a]); // the parent it left, not the one it joined
   });
 
   it("throws when moving a bound unit across engines", () => {

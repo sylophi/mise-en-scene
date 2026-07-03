@@ -115,6 +115,20 @@ export class Unit<P extends UnitProps = UnitProps> {
   }
 
   /**
+   * The nearest ancestor that is an instance of `Ctor`, or null. The idiom for
+   * units that cooperate with a containing system, e.g. a physics body finding
+   * its `PhysicsWorld2D` on tree enter.
+   */
+  findAncestor<T extends Unit>(
+    Ctor: abstract new (...args: never[]) => T,
+  ): T | null {
+    for (let u = this._parent; u; u = u._parent) {
+      if (u instanceof Ctor) return u;
+    }
+    return null;
+  }
+
+  /**
    * Attach `child` under this unit. Reparents if `child` already has a parent.
    * Engine binding propagates into the child subtree, which may fire
    * `onTreeEnter`/`onTreeExit` as it enters or leaves the live tree.
@@ -133,13 +147,16 @@ export class Unit<P extends UnitProps = UnitProps> {
     if (child._parent === this) return;
     // A same-engine reparent fires no enter/exit; report it as a move instead.
     const engine = this._engine;
+    const prevParent = child._parent;
     const isMove =
-      child._parent !== null && engine !== null && child._engine === engine;
-    if (child._parent) child._parent._unlink(child);
+      prevParent !== null && engine !== null && child._engine === engine;
+    if (prevParent) prevParent._unlink(child);
 
     child._parent = this;
     this._children.push(child);
-    child.propagateEngine(this._engine);
+    // `prevParent` matters when a live child moves under a detached parent:
+    // that path exits the tree, and onTreeExit must report the parent left.
+    child.propagateEngine(this._engine, prevParent);
     child._onParentChanged?.fire(this);
     if (isMove) engine.onUnitMoved.fire(child);
   }
@@ -261,7 +278,7 @@ export class Unit<P extends UnitProps = UnitProps> {
    * `cooldown.ready` / `cooldown.start()` replace the hand-rolled
    * `cd -= dt; if (cd <= 0) ...` pattern.
    */
-  cooldown(duration: number): Cooldown {
+  cooldown(duration?: number): Cooldown {
     if (this._destroyed) {
       throw new Error("cannot create a cooldown on a destroyed unit");
     }

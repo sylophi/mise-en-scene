@@ -46,7 +46,17 @@ function useRenderables(engine: Engine): Renderable[] {
     collectRenderables(engine.root),
   );
   useEffect(() => {
-    setList(collectRenderables(engine.root)); // re-sync: tree may have changed before this effect
+    // Keep the previous array when a re-collect yields the same units in the
+    // same order, so React bails out of the state update entirely.
+    const resync = (): void => {
+      const next = collectRenderables(engine.root);
+      setList((prev) =>
+        prev.length === next.length && prev.every((u, i) => u === next[i])
+          ? prev
+          : next,
+      );
+    };
+    resync(); // the tree may have changed between render and this effect
     // Coalesce event bursts (N spawns in one tick) into a single re-collect.
     let scheduled = false;
     let active = true;
@@ -55,7 +65,7 @@ function useRenderables(engine: Engine): Renderable[] {
       scheduled = true;
       queueMicrotask(() => {
         scheduled = false;
-        if (active) setList(collectRenderables(engine.root));
+        if (active) resync();
       });
     };
     const onEnter = engine.onUnitEnter.addListener((u) => {

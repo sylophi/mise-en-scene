@@ -14,7 +14,7 @@ export function entityTransformCss(m: Matrix2D): string {
 }
 
 /**
- * CSS transform for the viewport: the inverse of the camera's world
+ * CSS transform for the viewport: the inverse of the camera's view
  * transform, applied once so a camera move re-renders one element, not every
  * entity. `M⁻¹ = L⁻¹ · T⁻¹`: the translation undoes first (rightmost), then
  * the inverted linear part.
