@@ -140,10 +140,3 @@ sword overlaps enemies but ignores the player's own hurtbox on layer 4.
   subtrees unscaled; squash the renderable child instead.
 - **One `moveAndSlide` per tick.** It both queries and moves; calling it
   from `deviceTick` would let render rate change game speed.
-
-## Roadmap
-
-- `RigidBody2D`: dynamic bodies under gravity, forces, and impulses
-- Contact events on bodies (v1 events are sensor overlaps via `Area2D`)
-- Shape casts and point queries alongside `castRay`
-- Character presets: autostep, snap-to-ground, max slope as props

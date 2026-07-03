@@ -168,11 +168,3 @@ Rules of the road:
 Building your own is equally natural: a tween can be an invisible `Unit`
 that interpolates a target's accessors in `tick` and destroys itself when
 done, which gets engine-time sync (and pause) for free.
-
-## Roadmap
-
-- Batched per-frame flush: collect dirty units and flush once per
-  `deviceTick`, so N changes in a tick cost one re-render (v1 re-renders per
-  change)
-- Canvas/WebGL escape-hatch layer for effects DOM is bad at (particles)
-- Build/publish step (currently consumed as TypeScript source)

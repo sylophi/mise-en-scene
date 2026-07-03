@@ -390,13 +390,3 @@ world-transform representation. `Matrix2D.fromTRS(position, rotation, scale)`,
 `apply(v)`, `Matrix2D.identity`. Unlike a TRS triple, a matrix composes
 exactly: non-uniform scale under rotation produces shear, which only a
 matrix can hold.
-
-## Roadmap
-
-- Multiple simultaneous scenes (v1 `changeScene` swaps one child under root)
-- Lazy-cached world transforms with dirty propagation (v1 recomputes on read)
-- Per-unit tick enable/disable
-- Structural equality option for `ObservableValue` (v1 is `===`)
-- Serialization of the live tree for a future editor
-- Decorator sugar (`@observable accessor hp = 100`) to collapse the accessor
-  pattern to one line
