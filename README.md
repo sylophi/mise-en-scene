@@ -59,6 +59,8 @@ createRoot(el).render(<MiseProvider engine={engine} />);
 | `@mise/core` | The headless engine. Pure TypeScript, zero dependencies. | [core/README.md](core/README.md) |
 | `@mise/react` | The React DOM renderer: compositor, hooks, input adapter. | [react/README.md](react/README.md) |
 | `@mise/physics` | Rapier-backed bodies, areas, shapes, raycasts. | [physics/README.md](physics/README.md) |
+| `@mise/tilemap` | Tilemaps: chunked rendering, merged colliders, Tiled `.tmj` import. | [tilemap/README.md](tilemap/README.md) |
 
 `@mise/react` and `@mise/physics` depend on `@mise/core` and not on each
-other; `core` knows nothing about rendering or physics.
+other; `core` knows nothing about rendering or physics. Content-level
+packages like `@mise/tilemap` sit above both pillars.

@@ -19,8 +19,11 @@
 
 ## 3. Content and workflow
 
-- **Tilemaps**: a `TileMap2D` that stamps renderables and merged static
-  colliders from a grid, with Tiled (`.tmj`) import as the authoring path.
+- ~~**Tilemaps**: a `TileMap2D` that stamps renderables and merged static
+  colliders from a grid, with Tiled (`.tmj`) import as the authoring path.~~
+  Done: [`@mise/tilemap`](tilemap/README.md), design notes in
+  [docs/design/tilemap.md](docs/design/tilemap.md), playable example in
+  [examples/tilemap-platformer](examples/tilemap-platformer).
 - **Asset preloading** (`@mise/react`): `preload([...urls])` with progress.
 - **Sprite animation helper** (`@mise/react`): an `AnimatedSprite`-style
   component or hook (frames, fps, play/loop) driven by engine time, so it
