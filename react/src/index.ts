@@ -7,3 +7,22 @@ export {
   type RenderableView,
   type RenderableProps,
 } from "./renderable.ts";
+export {
+  preload,
+  usePreload,
+  type PreloadError,
+  type PreloadOptions,
+  type PreloadResult,
+  type PreloadTask,
+} from "./preload.ts";
+export {
+  frameAt,
+  useSpriteAnimation,
+  type SpriteAnimation,
+  type SpriteAnimationOptions,
+} from "./sprite-animation.ts";
+export {
+  AnimatedSprite,
+  type AnimatedSpriteProps,
+  type SpriteSheetSpec,
+} from "./animated-sprite.tsx";

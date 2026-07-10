@@ -21,10 +21,13 @@
 
 - **Tilemaps**: a `TileMap2D` that stamps renderables and merged static
   colliders from a grid, with Tiled (`.tmj`) import as the authoring path.
-- **Asset preloading** (`@mise/react`): `preload([...urls])` with progress.
-- **Sprite animation helper** (`@mise/react`): an `AnimatedSprite`-style
-  component or hook (frames, fps, play/loop) driven by engine time, so it
-  pauses with the game.
+- ~~**Asset preloading** (`@mise/react`)~~ — done: `preload([...urls])` /
+  `usePreload` with progress, per-url error policy (see react/README.md and
+  docs/design/assets-and-sprites.md).
+- ~~**Sprite animation helper** (`@mise/react`)~~ — done: `AnimatedSprite`
+  component + `useSpriteAnimation` hook (sheet or multi-image, fps,
+  play/loop/gotoFrame, onFinished) driven by engine time, so it pauses with
+  the game. Demo: `examples/sprites-demo`.
 - **Physics debug draw** (`@mise/physics`): dev-mode visualization of
   colliders, rays, and areas in the React layer.
 

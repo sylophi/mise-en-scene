@@ -128,6 +128,66 @@ all), so game code never sees a pixel. Single-character keys are normalized
 to lowercase by `Input` itself, so Shift can't split `"j"`/`"J"` into two
 keys. v1 is keyboard and pointer only: no touch, no action mapping.
 
+## Asset preloading
+
+`preload(urls)` warms the cache ahead of use: images load through
+`new Image()` + `decode()` (fetched *and* decoded, so first paint is
+instant), everything else through `fetch()` with a full body read. It returns
+no asset objects on purpose — the browser cache is the asset store, and
+consumers just use the same url again.
+
+```tsx
+const { progress, done, errors } = usePreload(ASSET_URLS);
+if (!done) return <ProgressBar value={progress} />;
+```
+
+- `preload(urls, options?)` returns a task: `progress$` / `done$` / `errors$`
+  (`ObservableValue`s a loading screen observes), `promise`, `total`,
+  `loaded`. `usePreload(urls)` is the hook form; tasks are cached per url
+  list, so remounting a loading screen never re-issues loads.
+- **Failures don't abort the batch.** A failed url is recorded in `errors$`,
+  still counts toward `progress$` (which always reaches 1), and `promise`
+  *resolves* — never rejects — with `{ errors }`. Check `errors.length` if
+  you want fail-fast.
+- `options.load` overrides the per-url loader (tests, custom asset types).
+
+## Sprite animation
+
+`AnimatedSprite` flips frames on **engine time**, not wall clock: the hook
+behind it mounts an invisible driver unit whose `tick` advances the clip, so
+if `engine.time` doesn't advance, neither does the animation — game pauses
+pause your sprites for free.
+
+```tsx
+// One spritesheet image with a grid of cells…
+<AnimatedSprite sheet={{ src, columns: 6, rows: 1 }} fps={12} width={8} height={8} />
+// …or give the cell size in source px and the grid is measured from the image
+<AnimatedSprite sheet={{ src, frameWidth: 16, frameHeight: 16 }} fps={12} width={8} height={8} />
+// …or one image per frame
+<AnimatedSprite images={frames} fps={12} width={8} height={8} />
+```
+
+- Sized in camera units (`width`/`height`); sheet cells render via
+  `background-position` authored entirely in `var(--u)`, so resize stays a
+  pure CSS reflow. Draws with its top-left at the origin like everything
+  else; center it with `style={{ transform: "translate(-50%, -50%)" }}`.
+  `pixelated` (default true) keeps pixel art crisp.
+- `frames` selects cells: an index array into the row-major grid (or image
+  list), or a count from cell 0. Default: every cell.
+- `fps` (default 10), `loop` (default true), declarative `playing`, and
+  `onFinished` — fired once when a non-looping clip has shown its last frame
+  for a full `1/fps`, after which the clip stops; `play()` restarts it.
+- The underlying hook is exported for custom components:
+
+```tsx
+const anim = useSpriteAnimation({ frameCount: 6, fps: 12 });
+// anim.frame, anim.playing, anim.play(), anim.stop(), anim.gotoFrame(i)
+```
+
+`frameAt(elapsed, frameCount, fps, loop)` is the pure frame math, exported
+for reuse. See `examples/sprites-demo` for a playable loading-screen +
+walk-cycle demo.
+
 ## Animation: bring your own
 
 There is no built-in tween system, by design. The `x`/`x$` accessors speak
