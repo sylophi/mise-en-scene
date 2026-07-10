@@ -1,0 +1,143 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: #10141c;
+  font-family: system-ui, sans-serif;
+  user-select: none;
+}
+
+/* The stage the compositor renders into. */
+[data-mise-stage] {
+  background: linear-gradient(#8ecbe8 0%, #cbe8f4 70%, #e8f2d8 100%);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* ── Entities (positioned by the engine; centered on their unit origin) ── */
+
+.box,
+.ball,
+.crate,
+.sling-post,
+.sling-ball,
+.aim-dot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.ground {
+  background: linear-gradient(#6fae4e, #5b8f42 25%, #7a5a3a 25%, #5c4128);
+  border-top: calc(0.4 * var(--u)) solid #86c95e;
+}
+
+.ball {
+  width: calc(6 * var(--u));
+  height: calc(6 * var(--u));
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4b5563, #1f2430 70%);
+}
+/* Spin marker: rides the entity's rotation so you can see the ball roll. */
+.ball::after {
+  content: "";
+  position: absolute;
+  left: 68%;
+  top: 44%;
+  width: 18%;
+  height: 18%;
+  border-radius: 50%;
+  background: #b8c1cc;
+}
+
+.crate {
+  width: calc(6 * var(--u));
+  height: calc(6 * var(--u));
+  background:
+    linear-gradient(45deg, transparent 45%, #a97b47 45% 55%, transparent 55%),
+    linear-gradient(-45deg, transparent 45%, #a97b47 45% 55%, transparent 55%),
+    linear-gradient(#c99a63, #b0824c);
+  border: calc(0.5 * var(--u)) solid #8a6136;
+  border-radius: calc(0.4 * var(--u));
+}
+
+.crate.hit {
+  animation: crate-flash 0.35s ease-out;
+}
+
+@keyframes crate-flash {
+  0% {
+    filter: brightness(3) saturate(0.2);
+  }
+  100% {
+    filter: none;
+  }
+}
+
+.sling-post {
+  top: calc(9 * var(--u)); /* from the anchor down to the ground */
+  width: calc(1.4 * var(--u));
+  height: calc(18 * var(--u));
+  background: linear-gradient(90deg, #7a5230, #5c3d22);
+  border-radius: calc(0.5 * var(--u));
+}
+
+.sling-ball {
+  width: calc(6 * var(--u));
+  height: calc(6 * var(--u));
+  border-radius: 50%;
+  border: calc(0.4 * var(--u)) dashed rgba(31, 36, 48, 0.55);
+  transition: background 0.15s;
+}
+
+.sling-ball.armed {
+  background: rgba(31, 36, 48, 0.35);
+}
+
+.aim-dot {
+  width: calc(1.2 * var(--u));
+  height: calc(1.2 * var(--u));
+  border-radius: 50%;
+  background: rgba(20, 26, 38, 0.8);
+}
+
+/* ── HUD overlay ── */
+
+.hud {
+  position: fixed;
+  top: 16px;
+  left: 20px;
+  color: #16324a;
+  pointer-events: none;
+}
+
+.hud-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.hud-score {
+  font-size: 40px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-shots {
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+.hud-help {
+  margin-top: 2px;
+  font-size: 13px;
+  opacity: 0.6;
+}

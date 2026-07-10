@@ -31,6 +31,11 @@ export class Area2D<
   /** Fires when another area stops overlapping this area. */
   readonly onAreaExited = new ObservableEvent<Area2D>();
 
+  /** @internal Areas are sensors: the world routes their events as overlaps. */
+  override get isSensor(): boolean {
+    return true;
+  }
+
   protected createBodyDesc(): RigidBodyDesc {
     return RigidBodyDesc.kinematicPositionBased();
   }

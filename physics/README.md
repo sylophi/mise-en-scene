@@ -66,9 +66,9 @@ fixed dt, and drains overlap events. It ticks before its descendants (the
 engine walks parent-first), so your `tick` always sees this frame's
 collision state.
 
-- `gravity` prop: world units per second squared, y down. It only affects
-  dynamic bodies, which v1 does not have yet; characters integrate their own
-  gravity (see the example).
+- `gravity` prop: world units per second squared, y down. It accelerates
+  `RigidBody2D` units (scale it per body with `gravityScale`); characters
+  integrate their own gravity (see the example).
 - `castRay(origin, direction, maxDistance?, opts?)`: closest-hit raycast.
   Returns `{ unit, point, normal, distance }` or `null`. Options: `mask` to
   filter by layer, `exclude` to skip a unit (usually the caster),
@@ -105,6 +105,37 @@ reflects the last `moveAndSlide`. "Up" is -y, matching gravity down the
 screen. For autostep, snap-to-ground, or slope limits, configure the exposed
 `controller` directly.
 
+### `RigidBody2D extends CollisionObject2D`
+
+A fully simulated body: gravity, forces, impulses, collision response.
+Crates, debris, projectiles. The *simulation* owns its transform — after
+each world step the body's pose is written back to `position`/`rotation`
+(firing `position$`/`rotation$`, so rendering follows). Setting `position`
+or `rotation` yourself *teleports* the body, keeping its velocities: a
+respawn tool, not a way to drive it. Drive it with velocities and forces:
+
+```ts
+const crate = mes(RigidBody2D, { density: 0.8, restitution: 0.3 }, [
+  mes(CollisionShape2D, { shape: rect(2, 2) }),
+]);
+crate.applyImpulse(new Vector(0, -50));       // instant kick (mass-scaled)
+crate.applyForce(new Vector(30, 0));          // this step only; call every
+crate.linearVelocity = new Vector(10, 0);     //   tick to sustain a thruster
+crate.applyImpulseAt(imp, worldPoint);        // off-center hits impart spin
+```
+
+Props: `density` (mass = density × shape area, default 1), `friction`,
+`restitution` (applied to every collider), `linearDamping`,
+`angularDamping`, `gravityScale`, `fixedRotation`, `canSleep`, `ccd` (for
+fast movers), and initial `linearVelocity`/`angularVelocity`. Accessors:
+`linearVelocity`, `angularVelocity` (plain, not observable — they change
+every step; rendering already follows the pose), `mass`, `sleeping`,
+`wakeUp()`.
+
+A dynamic body's pose is effectively world-space: it spawns at its unit's
+world transform, but once live, moving an ancestor does not drag it — the
+local transform is recomputed against the parent chain each step.
+
 ### `Area2D extends CollisionObject2D`
 
 A detection zone that overlaps everything and collides with nothing:
@@ -120,6 +151,27 @@ area.onBodyExited.addListener(...);   // and onAreaEntered / onAreaExited
 for (const target of swordHitbox.getOverlapping()) ...
 ```
 
+## Contact events
+
+Where `Area2D` reports *overlaps*, every body reports *solid contacts*:
+`onContactStarted`/`onContactEnded` on `CollisionObject2D`, so they work on
+static, character, and rigid bodies alike. Opt in with
+`contactEvents: true` — Rapier charges per reporting pair, and a pair
+reports when *either* side opts in, so flag the interested body (the
+cannonball), not the world (every wall). Both units of the pair receive the
+event. Like overlap events, they fire during the world's tick.
+
+```ts
+const ball = mes(RigidBody2D, { contactEvents: true }, [
+  mes(CollisionShape2D, { shape: circle(3) }),
+]);
+ball.onContactStarted.addListener(({ other, point, normal }) => {
+  // `point` is a world-space contact point; `normal` points from this
+  // body toward `other`. Both are null on `onContactEnded` (the pair no
+  // longer touches) — and that event fires with just `other`.
+});
+```
+
 ## Layers and masks
 
 Every body and area has a `layer` bitmask (what it *is*, default `1`) and a
@@ -133,8 +185,9 @@ sword overlaps enemies but ignores the player's own hurtbox on layer 4.
 - **Await `initPhysics()` first.** Constructing any physics unit before the
   WASM module is loaded throws.
 - **Transforms have one owner per body type.** You move characters and
-  areas (the simulation follows their units); the simulation will move
-  dynamic bodies when they exist. Static bodies don't move.
+  areas (the simulation follows their units); the simulation moves rigid
+  bodies (their units follow it, and your assignments teleport). Static
+  bodies don't move.
 - **No scale or shear on physics units.** Rigid bodies are rigid: colliders
   follow only translation and rotation of the world transform. Keep physics
   subtrees unscaled; squash the renderable child instead.

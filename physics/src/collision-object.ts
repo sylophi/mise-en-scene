@@ -1,10 +1,18 @@
-import type {
-  Collider,
-  ColliderDesc,
-  RigidBody,
-  RigidBodyDesc,
+import {
+  ActiveCollisionTypes,
+  ActiveEvents,
+  type Collider,
+  type ColliderDesc,
+  type RigidBody,
+  type RigidBodyDesc,
 } from "@dimforge/rapier2d-compat";
-import { Unit2D, Vector, type Unit, type Unit2DProps } from "@mise/core";
+import {
+  ObservableEvent,
+  Unit2D,
+  Vector,
+  type Unit,
+  type Unit2DProps,
+} from "@mise/core";
 import { colliderDescFor, type Shape } from "./shape.ts";
 import { PhysicsWorld2D } from "./world.ts";
 
@@ -13,6 +21,29 @@ export interface CollisionObject2DProps extends Unit2DProps {
   layer?: number;
   /** Bitmask of layers this object collides with. Default all. */
   mask?: number;
+  /**
+   * Generate `onContactStarted`/`onContactEnded` events for solid contacts
+   * involving this object. Default false: Rapier charges per reporting pair,
+   * and a pair reports when *either* side opts in, so flag the interested
+   * body (the cannonball), not the world (every wall).
+   */
+  contactEvents?: boolean;
+}
+
+/** A solid contact reported to `onContactStarted`/`onContactEnded`. */
+export interface Contact2D {
+  /** The other unit of the contact pair. */
+  other: CollisionObject2D;
+  /**
+   * A representative world-space contact point, or null when unavailable
+   * (always null for ended contacts: the pair no longer touches).
+   */
+  point: Vector | null;
+  /**
+   * Unit contact normal pointing from the receiving object toward `other`,
+   * or null when unavailable (always null for ended contacts).
+   */
+  normal: Vector | null;
 }
 
 /**
@@ -32,6 +63,18 @@ export abstract class CollisionObject2D<
 > extends Unit2D<P> {
   readonly layer: number;
   readonly mask: number;
+  /** Whether this object's colliders generate contact events. */
+  readonly contactEvents: boolean;
+
+  /**
+   * Fires when a solid (non-sensor) contact involving this object starts.
+   * Requires `contactEvents: true` on at least one side of the pair; both
+   * sides then receive the event. Fires during the world's tick, one step
+   * after the contact actually forms.
+   */
+  readonly onContactStarted = new ObservableEvent<Contact2D>();
+  /** Fires when a solid contact involving this object ends. */
+  readonly onContactEnded = new ObservableEvent<Contact2D>();
 
   private _world: PhysicsWorld2D | null = null;
   private _body: RigidBody | null = null;
@@ -41,6 +84,7 @@ export abstract class CollisionObject2D<
     super(props);
     this.layer = props?.layer ?? 1;
     this.mask = props?.mask ?? 0xffff;
+    this.contactEvents = props?.contactEvents ?? false;
   }
 
   /** The Rapier rigid body, while live in a physics world. */
@@ -114,6 +158,21 @@ export abstract class CollisionObject2D<
   }
 
   /**
+   * @internal Whether this object's colliders are sensors (overlap, don't
+   * collide). The world routes events by this: sensor pairs report overlaps,
+   * solid pairs report contacts. `Area2D` overrides it to true.
+   */
+  get isSensor(): boolean {
+    return false;
+  }
+
+  /**
+   * @internal Called by the world after each step, before events are drained.
+   * `RigidBody2D` overrides this to write the simulated pose back to the unit.
+   */
+  postStep(): void {}
+
+  /**
    * @internal Called by the world when a sensor overlap involving this object
    * starts or stops. `Area2D` overrides this to fire its events.
    */
@@ -129,6 +188,13 @@ export abstract class CollisionObject2D<
       .setRotation(shape.rotation)
       .setCollisionGroups(this.interactionGroups);
     this.configureColliderDesc(desc);
+    if (this.contactEvents) {
+      desc
+        .setActiveEvents(ActiveEvents.COLLISION_EVENTS)
+        // Rapier skips kinematic↔fixed pairs by default; opting into every
+        // pairing only widens narrow-phase *detection*, never solving.
+        .setActiveCollisionTypes(ActiveCollisionTypes.ALL);
+    }
     const collider = world.world.createCollider(desc, body);
     this.shapeColliders.set(shape, collider);
     world.mapCollider(collider.handle, this);

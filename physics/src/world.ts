@@ -67,13 +67,67 @@ export class PhysicsWorld2D<
     for (const obj of this.objects) obj.pushTransform();
     this.world.timestep = dt;
     this.world.step(this.eventQueue);
+    // Write simulated poses back (dynamic bodies) before events fire, so
+    // listeners see this step's positions.
+    for (const obj of this.objects) obj.postStep();
     this.eventQueue.drainCollisionEvents((h1, h2, started) => {
       const a = this.byCollider.get(h1);
       const b = this.byCollider.get(h2);
       if (!a || !b) return; // a side was removed mid-step
-      a.reportOverlap(b, started);
-      b.reportOverlap(a, started);
+      if (a.isSensor || b.isSensor) {
+        a.reportOverlap(b, started);
+        b.reportOverlap(a, started);
+      } else {
+        this.reportContact(a, b, h1, h2, started);
+      }
     });
+  }
+
+  /** Fire contact events on both units of a solid pair. */
+  private reportContact(
+    a: CollisionObject2D,
+    b: CollisionObject2D,
+    h1: number,
+    h2: number,
+    started: boolean,
+  ): void {
+    const aEvent = started ? a.onContactStarted : a.onContactEnded;
+    const bEvent = started ? b.onContactStarted : b.onContactEnded;
+    if (aEvent.size === 0 && bEvent.size === 0) return;
+
+    // Contact details exist only while the pair touches; ended events carry
+    // nulls. Fetched lazily: only when someone is listening.
+    const { point, normal } = started
+      ? this.contactInfo(h1, h2)
+      : { point: null, normal: null };
+    aEvent.fire({ other: b, point, normal });
+    bEvent.fire({ other: a, point, normal: normal ? normal.scale(-1) : null });
+  }
+
+  /**
+   * Read the first contact manifold of a touching pair: a representative
+   * world-space point and the normal oriented from `h1`'s object toward
+   * `h2`'s.
+   */
+  private contactInfo(
+    h1: number,
+    h2: number,
+  ): { point: Vector | null; normal: Vector | null } {
+    let point: Vector | null = null;
+    let normal: Vector | null = null;
+    const c1 = this.world.getCollider(h1);
+    const c2 = this.world.getCollider(h2);
+    if (c1 && c2) {
+      this.world.contactPair(c1, c2, (manifold, flipped) => {
+        const n = manifold.normal();
+        normal = flipped ? new Vector(-n.x, -n.y) : new Vector(n.x, n.y);
+        if (manifold.numSolverContacts() > 0) {
+          const p = manifold.solverContactPoint(0);
+          point = new Vector(p.x, p.y);
+        }
+      });
+    }
+    return { point, normal };
   }
 
   /**

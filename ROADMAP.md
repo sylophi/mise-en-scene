@@ -14,8 +14,9 @@
   positional panning and volume, Web Audio underneath.
 - **Pause and time scale** (`@mise/core`): a `timeScale` accessor on the
   engine (0 pauses) that scales the fixed clock; React UI keeps running.
-- **`RigidBody2D`** (`@mise/physics`): dynamic bodies under gravity, forces,
-  and impulses.
+- ~~**`RigidBody2D`** (`@mise/physics`): dynamic bodies under gravity, forces,
+  and impulses.~~ Done — see `docs/design/rigidbody.md` and
+  `examples/rigidbody-playground`.
 
 ## 3. Content and workflow
 
@@ -30,7 +31,9 @@
 
 ## 4. Rounding out physics
 
-- **Contact events on bodies** (v1 events are sensor overlaps via `Area2D`)
+- ~~**Contact events on bodies** (v1 events are sensor overlaps via
+  `Area2D`)~~ Done — `onContactStarted`/`onContactEnded` on
+  `CollisionObject2D`, opt-in via `contactEvents`.
 - **Shape casts and point queries** alongside `castRay`
 - **Character presets**: autostep, snap-to-ground, max slope as props
 
