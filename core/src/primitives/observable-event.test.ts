@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ObservableEvent } from "./observable-event.ts";
-import { ObservableValue } from "./observable-value.ts";
+import { ObservableValue, structuralEquals } from "./observable-value.ts";
+import { Vector } from "./vector.ts";
 
 describe("ObservableEvent", () => {
   it("fires listeners with the payload", () => {
@@ -70,5 +71,71 @@ describe("ObservableValue", () => {
     let count = 0;
     ov.addListener(() => count++);
     expect(count).toBe(0);
+  });
+
+  describe("equals option", () => {
+    it("suppresses sets the comparator deems equal, keeping the old value", () => {
+      const ov = new ObservableValue(new Vector(1, 2), {
+        equals: (a, b) => a.equals(b),
+      });
+      const first = ov.get();
+      let count = 0;
+      ov.addListener(() => count++);
+      ov.set(new Vector(1, 2)); // fresh but structurally equal instance
+      expect(count).toBe(0);
+      expect(ov.get()).toBe(first); // old reference kept
+      ov.set(new Vector(3, 2));
+      expect(count).toBe(1);
+      expect(ov.get()).toEqual(new Vector(3, 2));
+    });
+
+    it("still treats === sets as a no-op without consulting the comparator", () => {
+      let called = 0;
+      const ov = new ObservableValue(7, {
+        equals: () => {
+          called++;
+          return false;
+        },
+      });
+      ov.set(7);
+      expect(called).toBe(0);
+    });
+
+    it("defaults to === when no comparator is given", () => {
+      const ov = new ObservableValue(new Vector(1, 2));
+      let count = 0;
+      ov.addListener(() => count++);
+      ov.set(new Vector(1, 2)); // equal in value, different reference
+      expect(count).toBe(1); // v1 behavior preserved
+    });
+  });
+});
+
+describe("structuralEquals", () => {
+  it("matches identical references", () => {
+    const v = new Vector(1, 1);
+    expect(structuralEquals(v, v)).toBe(true);
+    expect(structuralEquals(3, 3)).toBe(true);
+  });
+
+  it("delegates to a same-class equals method", () => {
+    expect(structuralEquals(new Vector(1, 2), new Vector(1, 2))).toBe(true);
+    expect(structuralEquals(new Vector(1, 2), new Vector(9, 2))).toBe(false);
+  });
+
+  it("rejects different classes and equals-less objects", () => {
+    class Fake {
+      constructor(
+        readonly x: number,
+        readonly y: number,
+      ) {}
+      equals(): boolean {
+        return true;
+      }
+    }
+    expect(structuralEquals(new Fake(1, 2), new Vector(1, 2))).toBe(false);
+    expect(structuralEquals({ x: 1 }, { x: 1 })).toBe(false);
+    expect(structuralEquals(null, null)).toBe(true); // === short-circuit
+    expect(structuralEquals(1, 2)).toBe(false);
   });
 });

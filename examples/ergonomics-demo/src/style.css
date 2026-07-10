@@ -1,0 +1,147 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #0b0e1a;
+  color: #e8ecff;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  overflow: hidden;
+}
+
+.app {
+  position: relative;
+  height: 100%;
+}
+
+[data-mise-stage] {
+  background: radial-gradient(
+    ellipse at center,
+    #171c33 0%,
+    #10142a 70%,
+    #0d1124 100%
+  );
+  outline: 1px solid #232a4d;
+}
+
+/* ── Units (sized in camera units via --u, centered on their origin) ─────── */
+
+.player {
+  width: calc(4 * var(--u));
+  height: calc(4 * var(--u));
+  transform: translate(-50%, -50%);
+  background: #5eead4;
+  border-radius: 22%;
+  box-shadow: 0 0 calc(1.6 * var(--u)) #5eead477;
+}
+
+.player.shielded {
+  opacity: 0.45;
+}
+
+.gem {
+  width: calc(2.6 * var(--u));
+  height: calc(2.6 * var(--u));
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: #a78bfa;
+  border-radius: 15%;
+}
+
+.gem.glow {
+  box-shadow: 0 0 calc(2.2 * var(--u)) #a78bfacc;
+  background: #c4b5fd;
+}
+
+.chaser {
+  width: calc(4.2 * var(--u));
+  height: calc(4.2 * var(--u));
+  transform: translate(-50%, -50%);
+  background: #fb7185;
+  border-radius: 50%;
+}
+
+.chaser.enraged {
+  background: #ef4444;
+  box-shadow: 0 0 calc(2.4 * var(--u)) #ef4444aa;
+}
+
+/* ── HUD overlay ─────────────────────────────────────────────────────────── */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 18px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 26px;
+  font-weight: 700;
+  text-shadow: 0 2px 8px #000a;
+}
+
+.hearts {
+  color: #fb7185;
+  letter-spacing: 4px;
+}
+
+.hud-panels {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.panel {
+  background: #101530cc;
+  border: 1px solid #2a3158;
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 260px;
+  backdrop-filter: blur(4px);
+}
+
+.panel-title {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: #8ea0ff;
+  margin-bottom: 6px;
+}
+
+.panel-value {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.panel-renders {
+  font-size: 22px;
+  font-weight: 800;
+  color: #5eead4;
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-note {
+  font-size: 11px;
+  color: #9aa3c7;
+  margin-top: 4px;
+}
+
+.hud-help {
+  font-size: 13px;
+  color: #9aa3c7;
+}

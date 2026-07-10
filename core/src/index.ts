@@ -2,7 +2,12 @@
 export { Vector } from "./primitives/vector.ts";
 export { Matrix2D } from "./primitives/matrix2d.ts";
 export { ObservableEvent, type Unsub } from "./primitives/observable-event.ts";
-export { ObservableValue } from "./primitives/observable-value.ts";
+export {
+  ObservableValue,
+  structuralEquals,
+  type ObservableValueOptions,
+} from "./primitives/observable-value.ts";
+export { observable, channel } from "./primitives/observable.ts";
 export { clamp, lerp, damp } from "./primitives/math.ts";
 
 // Units

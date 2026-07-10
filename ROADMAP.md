@@ -37,9 +37,15 @@
 ## 5. Core ergonomics and later
 
 - **Per-unit tick enable/disable** (`@mise/core`)
-- **Decorator sugar** (`@mise/core`): `@observable accessor hp = 100` to
-  collapse the accessor trio to one line
-- **Structural equality option for `ObservableValue`** (v1 is `===`)
+- ~~**Decorator sugar** (`@mise/core`): `@observable accessor hp = 100` to
+  collapse the accessor trio to one line~~ **Done** — plus a typed
+  `channel(unit, "hp")` lookup helper; see "Reactive primitives" in
+  [core/README.md](core/README.md) and
+  [docs/design/observable-ergonomics.md](docs/design/observable-ergonomics.md).
+- ~~**Structural equality option for `ObservableValue`** (v1 is `===`)~~
+  **Done** — `new ObservableValue(v, { equals })` with a built-in
+  `structuralEquals`; `@observable({ equals })` threads it through.
+  Demo: [examples/ergonomics-demo](examples/ergonomics-demo/README.md).
 - **Canvas/WebGL escape-hatch layer** (`@mise/react`) for effects DOM is bad
   at (particles)
 - **Build/publish step** (currently consumed as TypeScript source)

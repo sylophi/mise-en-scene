@@ -356,6 +356,58 @@ All built-in reactive fields come in these pairs: `position`/`position$`,
 footgun to remember: reading `unit.hp` inside a React component never
 subscribes. Components must read through `useObservable(unit.hp$)`.
 
+### `@observable` accessor sugar
+
+The trio collapses to one line with a standard (TC39) decorator on an
+`accessor` field — plain TypeScript 5+, no `experimentalDecorators`:
+
+```ts
+class Player extends Renderable {
+  @observable accessor hp = 100;
+  // ≡ readonly hp$ = new ObservableValue(100);
+  //   get hp() { return this.hp$.get(); }
+  //   set hp(v: number) { this.hp$.set(v); }
+}
+```
+
+The result is exactly the trio's public shape: `hp` is a real getter/setter
+pair on the prototype (so `+=` works and tween libraries can drive it), and
+`hp$` is a real per-instance, read-only `ObservableValue` seeded with the
+initializer. `ObservableValue` options thread through the factory form, and
+constructor seeding stays plain assignment:
+
+```ts
+@observable({ equals: structuralEquals }) accessor pos = Vector.zero;
+
+constructor(props?: PlayerProps) {
+  super(props);
+  if (props?.hp !== undefined) this.hp = props.hp;
+}
+```
+
+**The typing caveat.** A decorator cannot add declared members to a class
+type, so `hp$` exists at runtime but TypeScript does not know about it. Two
+ways to get the typed channel:
+
+```ts
+// 1. Declare it (one line; shows up in autocomplete, it's your public API):
+declare readonly hp$: ObservableValue<number>;
+
+// 2. Or look it up, typed from the accessor it backs:
+useObservable(channel(player, "hp")); // ObservableValue<number>
+```
+
+`channel(obj, "name")` also finds manual trios (same `name$` convention) and
+throws if `name$` is not an `ObservableValue`. Only public, string-named
+instance accessors can be decorated (the channel name is derived by
+appending `$`, and it must be reachable from outside).
+
+**Toolchain note.** Type-wise this is standard TypeScript; at runtime your
+bundler must lower TC39 decorators. esbuild-based tools (Vite 7, esbuild
+0.21+) do when the target is `es2022` (not `esnext`, which passes them
+through); oxc-based Vite 8 cannot yet. This repo pins Vitest's Vite to 7 for
+that reason.
+
 ### `ObservableEvent<T>`
 
 A pure event, no stored value. `addListener(cb)` returns an unsubscribe
@@ -364,9 +416,22 @@ listeners may add/remove during dispatch).
 
 ### `ObservableValue<T>`
 
-Holds a value. `get()`, `set(value)` (no-op when `===` the current value),
-`addListener(cb)`. Listeners fire only on the next change, never on
-subscribe. v1 compares by `===`, so prefer immutable values like `Vector`.
+Holds a value. `get()`, `set(value)`, `addListener(cb)`. Listeners fire only
+on the next change, never on subscribe. `set` is a no-op (fires nothing) when
+the new value is `===` the current one — or equal under an optional
+comparator:
+
+```ts
+new ObservableValue(Vector.zero, { equals: structuralEquals })
+```
+
+`equals: (a, b) => boolean` decides whether a `set` is a no-op; the `===`
+fast path always applies first, and a suppressed set keeps the old reference
+(subscribers like React see a stable snapshot). `structuralEquals` is the
+built-in comparator for immutable value objects: same reference, or
+same-class instances whose `equals` method (like `Vector`'s) returns true.
+Without the option, comparison is `===` as in v1, so prefer immutable values
+like `Vector`.
 
 ### `Vector`
 
