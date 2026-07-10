@@ -54,7 +54,10 @@ Hooks:
 - `useEngine()`: the engine from context.
 - `useObservable(ov)`: subscribes to one `ObservableValue` via
   `useSyncExternalStore` and returns its current value. Read three values,
-  subscribe to three; an unread value changing never re-renders you.
+  subscribe to three; an unread value changing never re-renders you. Under a
+  `<MiseProvider>` re-renders are batched to the per-frame flush (below), so
+  a value written every fixed tick costs one render per frame, with the
+  latest value.
 
 ## How the compositor works
 
@@ -73,6 +76,15 @@ Hooks:
 - **Wrapper/content split:** the wrapper (cheap, empty) handles movement and
   subscribes to the transform chain; your `component` subscribes only to the
   appearance state it reads. Moving a unit does not re-run your component.
+- **Batched per-frame flush:** changes mark their subscribers dirty; one
+  flush per device tick (after the frame's `deviceTick` walk) turns the
+  frame's whole burst — every fixed tick, every unit — into a single React
+  render pass reading the latest state. Nothing is lost, updates just land
+  at the next frame instead of per change. Game-code listeners on the
+  observables are *not* deferred; only React work is. When the engine's
+  device loop isn't running (stopped engine, tests, no rAF), the flush falls
+  back to a microtask so external writes still render; manual
+  `engine.advanceDevice(dt)` also flushes.
 - Z-order: wrappers get CSS `z-index = z * 100000 + treeOrder`, so explicit
   layers always beat tree position and tree order breaks ties within a layer.
 

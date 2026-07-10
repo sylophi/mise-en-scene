@@ -127,7 +127,12 @@ waypoints, spawn points).
 - World transforms are matrices, not position/rotation/scale triples, so
   non-uniform ancestor scale over a rotated child shears correctly. This
   matches Godot, whose rendering also composes `Transform2D` by full matrix
-  multiplication. (v1 computes on read with no caching.)
+  multiplication.
+- `worldTransform` is lazy-cached with dirty propagation: composed on first
+  read, then returned by reference (matrices are immutable) until a local
+  change or a reparent anywhere in the chain invalidates the unit and its
+  dependent descendants. Reads of unchanged units are free, and the stable
+  reference doubles as a cheap "did it change" test for observers.
 
 ### `Camera extends Unit2D`
 
@@ -284,6 +289,7 @@ engine.changeScene(Level());
 | `changeScene(unit, { destroyPrevious? })` | Swaps the scene under root. Destroys the previous scene by default; pass `false` to detach it for reuse. Only manages scenes it mounted: units added directly under root (persistent managers, cameras) are left alone. |
 | `onUnitEnter` / `onUnitExit` | `ObservableEvent<Unit>`, fired as units enter (top-down) and leave (bottom-up) the live tree. |
 | `onUnitMoved` | Fired on same-engine reparents, which fire no enter/exit. Renderers refresh draw order from this. |
+| `onDeviceTick` | `ObservableEvent<number>`, fired after each device tick's tree walk with the clamped `dt`. The once-per-frame hook renderers batch their work behind. |
 | `advanceFixed(dt)` / `advanceDevice(dt)` | Manual stepping for headless use and tests. |
 
 Options: `fixedStep` (default 1/60), `maxCatchUp` (default 5),

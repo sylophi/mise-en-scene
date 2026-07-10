@@ -55,6 +55,12 @@ export class Engine {
    * whole subtree shifted with it.
    */
   readonly onUnitMoved = new ObservableEvent<Unit>();
+  /**
+   * Fires after each device tick's tree walk, with the (clamped) `dt`. The
+   * once-per-frame hook renderers batch their work behind: by the time it
+   * fires, every unit's `deviceTick` for the frame has run.
+   */
+  readonly onDeviceTick = new ObservableEvent<number>();
 
   readonly fixedStep: number;
   readonly maxCatchUp: number;
@@ -182,7 +188,9 @@ export class Engine {
    * `maxDeviceDt` so a long rAF gap (hidden tab) doesn't produce a giant step.
    */
   advanceDevice(realDt: number): void {
-    this.walk((u, dt) => u.deviceTick(dt), Math.min(realDt, this.maxDeviceDt));
+    const dt = Math.min(realDt, this.maxDeviceDt);
+    this.walk((u, stepDt) => u.deviceTick(stepDt), dt);
+    this.onDeviceTick.fire(dt);
   }
 
   /** Depth-first, top-down walk of the live tree. */

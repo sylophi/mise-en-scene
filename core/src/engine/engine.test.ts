@@ -98,6 +98,21 @@ describe("Engine fixed-step loop", () => {
     e.advanceDevice(5); // tab was hidden for 5s; rAF resumes with a huge gap
     expect(d.dt).toBeCloseTo(0.1);
   });
+
+  it("fires onDeviceTick once per device tick, after the walk, clamped", () => {
+    const e = new Engine({ autoStart: false, maxDeviceDt: 0.1 });
+    const d = new DeviceTicker();
+    e.root.addChild(d);
+    const seen: Array<{ dt: number; walked: number }> = [];
+    // Capture the unit's dt at fire time: proves the walk already ran.
+    e.onDeviceTick.addListener((dt) => seen.push({ dt, walked: d.dt }));
+    e.advanceDevice(0.016);
+    e.advanceDevice(5); // clamped
+    expect(seen).toHaveLength(2);
+    expect(seen[0]?.dt).toBeCloseTo(0.016);
+    expect(seen[0]?.walked).toBeCloseTo(0.016);
+    expect(seen[1]?.dt).toBeCloseTo(0.1);
+  });
 });
 
 describe("Engine.changeScene", () => {

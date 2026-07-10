@@ -1,11 +1,12 @@
 import {
   memo,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
-  useReducer,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type ReactNode,
 } from "react";
@@ -18,6 +19,7 @@ import {
 } from "@mise/core";
 import { Renderable } from "./renderable.ts";
 import { useEngine } from "./context.ts";
+import { useFlusher } from "./frame-flusher.ts";
 import { useObservable } from "./use-observable.ts";
 import {
   entityTransformCss,
@@ -90,36 +92,50 @@ function useRenderables(engine: Engine): Renderable[] {
 // ── World transform subscription ─────────────────────────────────────────────
 
 /**
- * Recompute on read, re-rendering whenever this unit or any contiguous `Unit2D`
- * ancestor changes its transform (a parent move shifts the child's world pose).
- * Reparenting anywhere in the chain rebuilds the subscriptions, so the hook
- * tracks the unit's *current* ancestors, not the chain at mount time.
+ * Subscribe to a unit's world transform: this unit plus every contiguous
+ * `Unit2D` ancestor (a parent move shifts the child's world pose). Reparenting
+ * anywhere in the chain rebuilds the subscriptions *synchronously* (a listener
+ * gap would drop changes on the new chain), so the hook tracks the unit's
+ * current ancestors; the re-renders themselves are batched per device tick via
+ * the flusher. The snapshot is `unit.worldTransform`, whose core-side cache
+ * keeps the reference stable between changes — exactly what
+ * `useSyncExternalStore` needs from a snapshot.
  */
 function useWorldTransform(unit: Unit2D): Matrix2D {
-  const [, bump] = useReducer((n: number) => n + 1, 0);
-  useEffect(() => {
-    const unsubs: Array<() => void> = [];
-    const unsubscribeAll = (): void => {
-      for (const f of unsubs) f();
-      unsubs.length = 0;
-    };
-    const onChainChanged = (): void => {
-      unsubscribeAll();
-      subscribe();
-      bump();
-    };
-    const subscribe = (): void => {
-      for (let u: Unit | null = unit; u instanceof Unit2D; u = u.parent) {
-        unsubs.push(u.position$.addListener(bump));
-        unsubs.push(u.rotation$.addListener(bump));
-        unsubs.push(u.scale$.addListener(bump));
-        unsubs.push(u.onParentChanged.addListener(onChainChanged));
-      }
-    };
-    subscribe();
-    return unsubscribeAll;
-  }, [unit]);
-  return unit.worldTransform;
+  const flusher = useFlusher();
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      // Mark dirty now; re-render once at the next per-frame flush.
+      const notify = (): void =>
+        flusher ? flusher.enqueue(onStoreChange) : onStoreChange();
+      const unsubs: Array<() => void> = [];
+      const unsubscribeAll = (): void => {
+        for (const f of unsubs) f();
+        unsubs.length = 0;
+      };
+      const onChainChanged = (): void => {
+        unsubscribeAll();
+        subscribeChain();
+        notify();
+      };
+      const subscribeChain = (): void => {
+        for (let u: Unit | null = unit; u instanceof Unit2D; u = u.parent) {
+          unsubs.push(u.position$.addListener(notify));
+          unsubs.push(u.rotation$.addListener(notify));
+          unsubs.push(u.scale$.addListener(notify));
+          unsubs.push(u.onParentChanged.addListener(onChainChanged));
+        }
+      };
+      subscribeChain();
+      return () => {
+        unsubscribeAll();
+        flusher?.cancel(onStoreChange); // don't notify an unmounted wrapper
+      };
+    },
+    [unit, flusher],
+  );
+  const getSnapshot = (): Matrix2D => unit.worldTransform;
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 // ── Entity wrapper (positioning) + content (appearance) ──────────────────────

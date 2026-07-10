@@ -4,8 +4,11 @@
 
 - **Batched per-frame flush** (`@mise/react`): collect dirty units and flush
   once per `deviceTick` instead of re-rendering per change.
+  **Done** — see [docs/design/performance.md](docs/design/performance.md)
+  and the [`examples/perf-stress`](examples/perf-stress) demo.
 - **Lazy-cached world transforms** (`@mise/core`): dirty propagation instead
   of recomputing on every read.
+  **Done** — see [docs/design/performance.md](docs/design/performance.md).
 
 ## 2. Missing pillars
 

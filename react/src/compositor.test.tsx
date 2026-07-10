@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { StrictMode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import {
@@ -58,11 +59,12 @@ describe("compositor", () => {
     expect(wrapper?.style.position).toBe("absolute");
   });
 
-  it("re-renders a component when its observed value changes", () => {
+  it("re-renders a component when its observed value changes", async () => {
     const counter = mes(Counter, {});
     render(<MiseProvider engine={makeEngine(counter)} />);
     expect(screen.getByTestId("count").textContent).toBe("0");
-    act(() => counter.count$.set(5));
+    // async: on a stopped engine, batched updates flush on a microtask
+    await act(async () => counter.count$.set(5));
     expect(screen.getByTestId("count").textContent).toBe("5");
   });
 
@@ -87,7 +89,8 @@ describe("compositor", () => {
     expect(wrapper?.style.transform).toContain("calc(10 * var(--u))");
     await act(async () => b.addChild(box)); // reparent a → b
     expect(wrapper?.style.transform).toContain("calc(20 * var(--u))");
-    act(() => (b.position = new Vector(30, 0))); // new chain stays subscribed
+    // new chain stays subscribed
+    await act(async () => (b.position = new Vector(30, 0)));
     expect(wrapper?.style.transform).toContain("calc(30 * var(--u))");
   });
 
@@ -135,6 +138,101 @@ describe("compositor", () => {
     expect(screen.getByTestId("box")).toBeTruthy();
     await act(async () => box.destroy());
     expect(screen.queryByTestId("box")).toBeNull();
+  });
+});
+
+describe("batched per-frame flush", () => {
+  // Renders per burst are the whole point; count them.
+  let renders = 0;
+  class Meter extends Renderable {
+    readonly value$ = new ObservableValue(0);
+    readonly component = ({ unit }: { unit: Meter }) => {
+      renders++;
+      const v = useObservable(unit.value$);
+      return <div data-testid="meter">{v}</div>;
+    };
+  }
+
+  it("coalesces an observable burst into one render at the device tick", () => {
+    renders = 0;
+    const meter = mes(Meter, {});
+    const engine = makeEngine(meter);
+    render(<MiseProvider engine={engine} />);
+    const mounted = renders;
+    act(() => {
+      for (let i = 1; i <= 100; i++) meter.value$.set(i);
+    });
+    // Nothing has ticked yet: the burst is pending, the DOM untouched.
+    expect(screen.getByTestId("meter").textContent).toBe("0");
+    act(() => engine.advanceDevice(1 / 60));
+    expect(screen.getByTestId("meter").textContent).toBe("100");
+    expect(renders).toBe(mounted + 1); // one render for the whole burst
+  });
+
+  it("defers wrapper transform updates to the device tick", () => {
+    const box = mes(Box, { position: new Vector(10, 0) });
+    const engine = makeEngine(box);
+    render(<MiseProvider engine={engine} />);
+    const wrapper = wrapperOf(box);
+    act(() => {
+      box.position = new Vector(20, 0);
+      box.position = new Vector(30, 0);
+      box.rotation = Math.PI; // several channels, one pending mark
+    });
+    expect(wrapper?.style.transform).toContain("calc(10 * var(--u))");
+    act(() => engine.advanceDevice(1 / 60));
+    expect(wrapper?.style.transform).toBe(
+      entityTransformCss(box.worldTransform),
+    );
+    expect(wrapper?.style.transform).toContain("calc(30 * var(--u))");
+  });
+
+  it("loses nothing across consecutive ticks", () => {
+    renders = 0;
+    const meter = mes(Meter, {});
+    const engine = makeEngine(meter);
+    render(<MiseProvider engine={engine} />);
+    act(() => meter.value$.set(1));
+    act(() => engine.advanceDevice(1 / 60));
+    expect(screen.getByTestId("meter").textContent).toBe("1");
+    act(() => meter.value$.set(2));
+    act(() => meter.value$.set(3));
+    act(() => engine.advanceDevice(1 / 60));
+    expect(screen.getByTestId("meter").textContent).toBe("3");
+    const settled = renders;
+    act(() => engine.advanceDevice(1 / 60)); // idle tick: nothing pending
+    expect(renders).toBe(settled);
+  });
+
+  it("stays correct under StrictMode", () => {
+    const meter = mes(Meter, {});
+    const box = mes(Box, { position: new Vector(5, 0) });
+    const scene = mes(Unit2D, {}, [meter, box]);
+    const engine = makeEngine(scene);
+    render(
+      <StrictMode>
+        <MiseProvider engine={engine} />
+      </StrictMode>,
+    );
+    act(() => {
+      meter.value$.set(7);
+      box.position = new Vector(9, 0);
+    });
+    act(() => engine.advanceDevice(1 / 60));
+    expect(screen.getByTestId("meter").textContent).toBe("7");
+    expect(wrapperOf(box)?.style.transform).toContain("calc(9 * var(--u))");
+  });
+
+  it("flushes cleanly when a unit exits with an update pending", async () => {
+    const meter = mes(Meter, {});
+    const engine = makeEngine(meter);
+    render(<MiseProvider engine={engine} />);
+    await act(async () => {
+      meter.value$.set(3); // pending…
+      meter.destroy(); // …then gone before the flush
+      engine.advanceDevice(1 / 60);
+    });
+    expect(screen.queryByTestId("meter")).toBeNull();
   });
 });
 

@@ -1,0 +1,63 @@
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0b0e14;
+  color: #dbe2f0;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* ── World (drawn in camera units via --u) ─────────────────────────────── */
+
+.arena {
+  transform: translate(-50%, -50%);
+  border: 2px solid #2a3550;
+  border-radius: 8px;
+  background: radial-gradient(circle at 50% 50%, #131a2a 0%, #0b0e14 75%);
+}
+
+.player {
+  width: calc(5 * var(--u));
+  height: calc(4 * var(--u));
+  transform: translate(-50%, -50%);
+  background: #f5f8ff;
+  clip-path: polygon(100% 50%, 0 0, 22% 50%, 0 100%);
+  filter: drop-shadow(0 0 calc(1.5 * var(--u)) #8fb4ff);
+}
+
+.chaser {
+  transform: translate(-50%, -50%);
+  border-radius: 22%;
+  opacity: 0.9;
+}
+
+/* ── HUD (plain React overlay, real pixels) ────────────────────────────── */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 80%);
+}
+
+.hud-stats {
+  display: flex;
+  gap: 18px;
+  font-size: 15px;
+}
+
+.hud-fps {
+  color: #7ef0b2;
+}
+
+.hud-help {
+  font-size: 12px;
+  opacity: 0.65;
+}

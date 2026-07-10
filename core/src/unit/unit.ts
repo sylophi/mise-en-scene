@@ -154,6 +154,7 @@ export class Unit<P extends UnitProps = UnitProps> {
 
     child._parent = this;
     this._children.push(child);
+    child.parentChanged(this); // internal caches first, before any listener runs
     // `prevParent` matters when a live child moves under a detached parent:
     // that path exits the tree, and onTreeExit must report the parent left.
     child.propagateEngine(this._engine, prevParent);
@@ -165,6 +166,7 @@ export class Unit<P extends UnitProps = UnitProps> {
   removeChild(child: Unit): void {
     if (child._parent !== this) return;
     this._unlink(child); // detach first so the live tree reflects the removal
+    child.parentChanged(null); // internal caches first, before any listener runs
     child.propagateEngine(null, this); // then fire exits, reporting the parent left
     child._onParentChanged?.fire(null);
   }
@@ -334,6 +336,15 @@ export class Unit<P extends UnitProps = UnitProps> {
       }
     }
   }
+
+  /**
+   * Internal hook: runs synchronously when `parent` changes (attach, reparent,
+   * detach), before lifecycle and `onParentChanged` fire, so subclass caches
+   * (e.g. `Unit2D`'s world transform) are coherent by the time any listener
+   * runs. A hook instead of a self-subscription because `onParentChanged` is
+   * allocated lazily and units are a per-frame spawn hot path. Not game API.
+   */
+  protected parentChanged(_parent: Unit | null): void {}
 
   // ── Lifecycle hooks (override in subclasses) ─────────────────────────────
 
