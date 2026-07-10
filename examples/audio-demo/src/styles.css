@@ -1,0 +1,159 @@
+* {
+  margin: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: #0b1210;
+  color: #e6f2ea;
+  font-family: system-ui, sans-serif;
+  overflow: hidden;
+}
+
+/* The compositor stage fills #root; make the app a positioning context so
+   the HUD can float above it. */
+#root {
+  position: relative;
+}
+
+/* ── World ─────────────────────────────────────────────────────────────── */
+
+/* Every sprite centers itself on its unit's position. */
+.meadow,
+.tuft,
+.player,
+.chirper {
+  transform: translate(-50%, -50%);
+}
+
+.meadow {
+  background:
+    radial-gradient(ellipse at 30% 20%, #17301f 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 70%, #14291e 0%, transparent 50%), #101f17;
+  border: calc(0.6 * var(--u)) solid #1e3a28;
+  border-radius: calc(3 * var(--u));
+}
+
+.tuft {
+  font-size: calc(6 * var(--u));
+  opacity: 0.55;
+  user-select: none;
+}
+
+.player {
+  font-size: calc(7 * var(--u));
+  filter: drop-shadow(0 0 calc(1.5 * var(--u)) #9fe8ff);
+  user-select: none;
+}
+
+.chirper {
+  font-size: calc(6 * var(--u));
+  user-select: none;
+  transition: opacity 0.2s linear;
+}
+
+.chirper-found {
+  animation: pop 0.45s ease-out;
+}
+
+@keyframes pop {
+  0% {
+    scale: 0.2;
+  }
+  60% {
+    scale: 1.5;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+/* ── HUD ───────────────────────────────────────────────────────────────── */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hud-bar {
+  pointer-events: auto;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(8, 16, 12, 0.75);
+  border: 1px solid rgba(160, 220, 190, 0.25);
+  font-size: 14px;
+}
+
+.hud-score {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.hud-help {
+  opacity: 0.7;
+}
+
+.hud-audio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-audio input[type="range"] {
+  width: 90px;
+  accent-color: #7ed8a8;
+}
+
+.hud-mute {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.hud-notice {
+  margin-top: 10px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(240, 200, 80, 0.15);
+  border: 1px solid rgba(240, 200, 80, 0.5);
+  color: #f4d98c;
+  font-size: 13px;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.hud-banner {
+  margin-top: auto;
+  margin-bottom: 15vh;
+  padding: 14px 26px;
+  border-radius: 14px;
+  background: rgba(20, 40, 28, 0.9);
+  border: 1px solid #7ed8a8;
+  font-size: 22px;
+  font-weight: 700;
+  animation: pop 0.45s ease-out;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}

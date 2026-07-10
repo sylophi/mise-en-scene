@@ -9,9 +9,12 @@
 
 ## 2. Missing pillars
 
-- **`@mise/audio`**: sound as units. An audio player unit that plays on tree
-  enter and stops on exit, a listener following the active camera for
-  positional panning and volume, Web Audio underneath.
+- ✅ **`@mise/audio`**: sound as units. An audio player unit that plays on
+  tree enter and stops on exit, a listener following the active camera for
+  positional panning and volume, Web Audio underneath. *Done: see
+  [audio/README.md](audio/README.md), the design notes in
+  [docs/design/audio.md](docs/design/audio.md), and the playable
+  [examples/audio-demo](examples/audio-demo).*
 - **Pause and time scale** (`@mise/core`): a `timeScale` accessor on the
   engine (0 pauses) that scales the fixed clock; React UI keeps running.
 - **`RigidBody2D`** (`@mise/physics`): dynamic bodies under gravity, forces,

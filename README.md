@@ -59,6 +59,7 @@ createRoot(el).render(<MiseProvider engine={engine} />);
 | `@mise/core` | The headless engine. Pure TypeScript, zero dependencies. | [core/README.md](core/README.md) |
 | `@mise/react` | The React DOM renderer: compositor, hooks, input adapter. | [react/README.md](react/README.md) |
 | `@mise/physics` | Rapier-backed bodies, areas, shapes, raycasts. | [physics/README.md](physics/README.md) |
+| `@mise/audio` | Web Audio players, mixer, and positional listener as units. | [audio/README.md](audio/README.md) |
 
 `@mise/react` and `@mise/physics` depend on `@mise/core` and not on each
 other; `core` knows nothing about rendering or physics.

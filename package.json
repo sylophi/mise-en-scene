@@ -6,7 +6,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p core/tsconfig.json && tsc -p react/tsconfig.json && tsc -p physics/tsconfig.json",
+    "typecheck": "tsc -p core/tsconfig.json && tsc -p react/tsconfig.json && tsc -p physics/tsconfig.json && tsc -p audio/tsconfig.json",
     "lint": "oxlint .",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",

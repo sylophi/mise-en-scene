@@ -2,3 +2,5 @@ packages:
   - core
   - react
   - physics
+  - audio
+  - examples/*
