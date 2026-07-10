@@ -2,3 +2,5 @@ packages:
   - core
   - react
   - physics
+  - physics-debug
+  - examples/*

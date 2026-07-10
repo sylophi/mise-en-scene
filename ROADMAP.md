@@ -25,8 +25,11 @@
 - **Sprite animation helper** (`@mise/react`): an `AnimatedSprite`-style
   component or hook (frames, fps, play/loop) driven by engine time, so it
   pauses with the game.
-- **Physics debug draw** (`@mise/physics`): dev-mode visualization of
-  colliders, rays, and areas in the React layer.
+- ~~**Physics debug draw** (`@mise/physics`): dev-mode visualization of
+  colliders, rays, and areas in the React layer.~~ Done: `debugSnapshot` +
+  `rayLog` in `@mise/physics`, the `PhysicsDebug2D` overlay in
+  `@mise/physics-debug`, demo in `examples/physics-debug/`
+  ([design](docs/design/physics-debug.md)).
 
 ## 4. Rounding out physics
 

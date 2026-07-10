@@ -128,6 +128,23 @@ one's `layer` intersects the other's `mask`. The classic setup: enemy
 hurtboxes on layer 2, the player's sword `Area2D` with `mask: 2`, so the
 sword overlaps enemies but ignores the player's own hurtbox on layer 4.
 
+## Debug draw data
+
+The package exposes renderer-agnostic debug data; the drop-in overlay that
+draws it lives in [`@mise/physics-debug`](../physics-debug/README.md), so
+physics never depends on React.
+
+- `debugSnapshot(world)`: one entry per collider —
+  `{ handle, role, shape, position, rotation, unit? }` — with the pose read
+  back from Rapier (what the simulation is actually colliding) and `role`
+  derived from simulation state: `"area"` for sensors, `"static"` for fixed
+  bodies, `"character"` for kinematic ones, `"dynamic"` reserved for future
+  dynamic bodies.
+- `world.rayLog`: an opt-in ring buffer of recent `castRay` calls (origin,
+  direction, hit or miss, engine time). Off by default — casting pays one
+  boolean check and records nothing. Set `rayLog.enabled = true` to record;
+  the debug overlay does this automatically while mounted.
+
 ## Rules of the road
 
 - **Await `initPhysics()` first.** Constructing any physics unit before the

@@ -59,6 +59,10 @@ createRoot(el).render(<MiseProvider engine={engine} />);
 | `@mise/core` | The headless engine. Pure TypeScript, zero dependencies. | [core/README.md](core/README.md) |
 | `@mise/react` | The React DOM renderer: compositor, hooks, input adapter. | [react/README.md](react/README.md) |
 | `@mise/physics` | Rapier-backed bodies, areas, shapes, raycasts. | [physics/README.md](physics/README.md) |
+| `@mise/physics-debug` | Dev-mode collider/ray visualization over the React renderer. | [physics-debug/README.md](physics-debug/README.md) |
 
 `@mise/react` and `@mise/physics` depend on `@mise/core` and not on each
-other; `core` knows nothing about rendering or physics.
+other; `core` knows nothing about rendering or physics. `@mise/physics-debug`
+is the one deliberate bridge: a dev tool that depends on both to draw
+physics through the React compositor. Runnable demos live in
+[`examples/`](examples/physics-debug/README.md).

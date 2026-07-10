@@ -25,3 +25,12 @@ export { Area2D } from "./area.ts";
 
 // Shapes
 export { capsule, circle, rect, type Shape } from "./shape.ts";
+
+// Debug draw data (rendered by @mise/physics-debug)
+export {
+  RayLog,
+  debugSnapshot,
+  type DebugRay,
+  type DebugRole,
+  type DebugShape,
+} from "./debug.ts";

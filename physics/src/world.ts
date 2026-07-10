@@ -6,6 +6,7 @@ import {
 } from "@dimforge/rapier2d-compat";
 import { Unit, Vector, type UnitProps } from "@mise/core";
 import { assertPhysicsReady } from "./init.ts";
+import { RayLog } from "./debug.ts";
 import type { CollisionObject2D } from "./collision-object.ts";
 
 export interface PhysicsWorld2DProps extends UnitProps {
@@ -51,6 +52,14 @@ export class PhysicsWorld2D<
 > extends Unit<P> {
   /** The underlying Rapier world, for anything this wrapper doesn't expose. */
   readonly world: World;
+
+  /**
+   * Opt-in debug recording of raycasts. While `rayLog.enabled` is true, every
+   * `castRay` appends its origin, direction, and outcome; while false (the
+   * default) casting records nothing, so games pay one boolean check unless
+   * they are being inspected. The debug overlay enables it while mounted.
+   */
+  readonly rayLog = new RayLog();
 
   private readonly eventQueue: EventQueue;
   private readonly objects = new Set<CollisionObject2D>();
@@ -101,15 +110,30 @@ export class PhysicsWorld2D<
       undefined,
       opts.exclude?.body ?? undefined,
     );
-    if (!hit) return null;
-    const unit = this.byCollider.get(hit.collider.handle);
-    if (!unit) return null;
-    return {
-      unit,
-      point: origin.add(dir.scale(hit.timeOfImpact)),
-      normal: new Vector(hit.normal.x, hit.normal.y),
-      distance: hit.timeOfImpact,
-    };
+    const unit = hit ? this.byCollider.get(hit.collider.handle) : undefined;
+    const result: RayHit | null =
+      hit && unit
+        ? {
+            unit,
+            point: origin.add(dir.scale(hit.timeOfImpact)),
+            normal: new Vector(hit.normal.x, hit.normal.y),
+            distance: hit.timeOfImpact,
+          }
+        : null;
+    if (this.rayLog.enabled) {
+      this.rayLog.record({
+        origin,
+        direction: dir,
+        maxDistance,
+        hit: result && {
+          point: result.point,
+          normal: result.normal,
+          distance: result.distance,
+        },
+        time: this.isLive ? this.engine.time : 0,
+      });
+    }
+    return result;
   }
 
   override onDestroy(): void {
