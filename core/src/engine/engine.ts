@@ -45,6 +45,47 @@ export class Engine {
     this.activeCamera$.set(camera);
   }
 
+  /** Channel behind `timeScale`. Pause menus and slow-mo UI subscribe to this. */
+  readonly timeScale$ = new ObservableValue(1);
+
+  /**
+   * Rate of simulated time relative to real time: 1 is realtime, 0.5 slow
+   * motion, 2 fast-forward, 0 pauses the fixed clock outright. Scaling changes
+   * how fast fixed steps *accrue*; each step's `dt` is always `fixedStep`, so
+   * simulation math is identical at any speed, steps just thin out or bunch up.
+   * At 0 nothing accrues: no `tick`, timers and cooldowns freeze, camera
+   * smoothing freezes, `time` stands still. `deviceTick` (and renderers) keep
+   * running on real time. Must be finite and >= 0. Assignment fires `timeScale$`.
+   */
+  get timeScale(): number {
+    return this.timeScale$.get();
+  }
+  set timeScale(v: number) {
+    if (!Number.isFinite(v) || v < 0) {
+      throw new Error("timeScale must be finite and >= 0");
+    }
+    this.timeScale$.set(v);
+  }
+
+  /**
+   * Convenience view of `timeScale === 0`. Setting `true` remembers the
+   * current scale and sets 0; setting `false` restores the remembered scale
+   * (1 if the engine was only ever paused by writing `timeScale = 0`
+   * directly). No channel of its own: subscribe via `timeScale$`.
+   */
+  get paused(): boolean {
+    return this.timeScale === 0;
+  }
+  set paused(v: boolean) {
+    if (v === this.paused) return;
+    if (v) {
+      this.resumeScale = this.timeScale;
+      this.timeScale = 0;
+    } else {
+      this.timeScale = this.resumeScale;
+    }
+  }
+
   /** Fires when a unit enters the live tree (top-down). */
   readonly onUnitEnter = new ObservableEvent<Unit>();
   /** Fires when a unit leaves the live tree (bottom-up). */
@@ -61,6 +102,7 @@ export class Engine {
   readonly maxDeviceDt: number;
 
   private accumulator = 0;
+  private resumeScale = 1;
   private _time = 0;
   private _running = false;
   private intervalId: ReturnType<typeof setInterval> | null = null;
@@ -80,7 +122,10 @@ export class Engine {
     if (options.autoStart ?? true) this.start();
   }
 
-  /** Total simulated time in seconds (advances in fixed steps). */
+  /**
+   * Total simulated time in seconds. Advances in fixed steps, so it moves at
+   * the `timeScale` rate: half speed at 0.5, frozen at 0.
+   */
   get time(): number {
     return this._time;
   }
@@ -154,19 +199,26 @@ export class Engine {
 
   // ── Stepping (also callable manually for headless/testing) ────────────────
 
-  /** Feed `realDt` seconds into the fixed-step accumulator and run due ticks. */
+  /**
+   * Feed `realDt` seconds into the fixed-step accumulator, scaled by
+   * `timeScale`, and run due ticks. While paused (`timeScale` 0) the
+   * accumulator does not grow, so real time spent paused produces no backlog
+   * and no catch-up burst on resume.
+   */
   advanceFixed(realDt: number): void {
-    this.accumulator += realDt;
+    this.accumulator += realDt * this.timeScale;
     let steps = 0;
     while (this.accumulator >= this.fixedStep && steps < this.maxCatchUp) {
       // Timers advance engine-side (before the unit's own tick) so they keep
       // working in subclasses that override `tick` without calling super.
       this.walk((u, dt) => {
+        if (!u.ticking) return; // dormant unit; children decide for themselves
         u.advanceTimers(dt);
         u.tick(dt);
       }, this.fixedStep);
       this.input.advanceTick();
-      this.activeCamera?.advanceView(this.fixedStep);
+      const camera = this.activeCamera;
+      if (camera?.ticking) camera.advanceView(this.fixedStep);
       this._time += this.fixedStep;
       this.accumulator -= this.fixedStep;
       steps++;
@@ -180,9 +232,18 @@ export class Engine {
   /**
    * Run one variable-step device tick over the tree. `realDt` is clamped to
    * `maxDeviceDt` so a long rAF gap (hidden tab) doesn't produce a giant step.
+   * The dt is real, never scaled by `timeScale`: device ticks keep running
+   * during pause and slow motion (that is what keeps menus and HUD alive).
+   * Multiply by `engine.timeScale` yourself for visuals that should slow with
+   * the game.
    */
   advanceDevice(realDt: number): void {
-    this.walk((u, dt) => u.deviceTick(dt), Math.min(realDt, this.maxDeviceDt));
+    this.walk(
+      (u, dt) => {
+        if (u.ticking) u.deviceTick(dt);
+      },
+      Math.min(realDt, this.maxDeviceDt),
+    );
   }
 
   /** Depth-first, top-down walk of the live tree. */

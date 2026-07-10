@@ -12,8 +12,10 @@
 - **`@mise/audio`**: sound as units. An audio player unit that plays on tree
   enter and stops on exit, a listener following the active camera for
   positional panning and volume, Web Audio underneath.
-- **Pause and time scale** (`@mise/core`): a `timeScale` accessor on the
-  engine (0 pauses) that scales the fixed clock; React UI keeps running.
+- ~~**Pause and time scale** (`@mise/core`)~~ — done: `engine.timeScale`
+  (0 pauses) scales the fixed clock, `engine.paused` convenience accessor;
+  React UI keeps running. See [docs/design/time-control.md](docs/design/time-control.md)
+  and [examples/time-control](examples/time-control).
 - **`RigidBody2D`** (`@mise/physics`): dynamic bodies under gravity, forces,
   and impulses.
 
@@ -36,7 +38,9 @@
 
 ## 5. Core ergonomics and later
 
-- **Per-unit tick enable/disable** (`@mise/core`)
+- ~~**Per-unit tick enable/disable** (`@mise/core`)~~ — done: `unit.ticking`
+  (default true) skips `tick`/`deviceTick` and freezes timers, unit-only.
+  See [docs/design/time-control.md](docs/design/time-control.md).
 - **Decorator sugar** (`@mise/core`): `@observable accessor hp = 100` to
   collapse the accessor trio to one line
 - **Structural equality option for `ObservableValue`** (v1 is `===`)

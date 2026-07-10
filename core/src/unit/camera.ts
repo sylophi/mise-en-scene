@@ -93,7 +93,9 @@ export class Camera<P extends CameraProps = CameraProps> extends Unit2D<P> {
   /**
    * Framerate-independent approach rate of the view toward the camera's
    * position, per second (higher is snappier; 0 disables). Advances on the
-   * fixed clock while this camera is active. Assignment fires `smoothing$`.
+   * fixed clock while this camera is active, so it freezes with the engine's
+   * `timeScale` at 0 and while the camera's `ticking` is false. Assignment
+   * fires `smoothing$`.
    */
   readonly smoothing$: ObservableValue<number>;
   get smoothing(): number {

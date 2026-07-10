@@ -1,0 +1,217 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #07090f;
+  color: #dfe5f1;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── World ──────────────────────────────────────────────────────────────── */
+
+.arena {
+  width: calc(100 * var(--u));
+  height: calc(56.25 * var(--u));
+  background:
+    radial-gradient(
+      ellipse at center,
+      rgba(84, 110, 190, 0.16),
+      transparent 70%
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent calc(5 * var(--u) - 1px),
+      rgba(120, 140, 200, 0.12) calc(5 * var(--u))
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent calc(5 * var(--u) - 1px),
+      rgba(120, 140, 200, 0.12) calc(5 * var(--u))
+    ),
+    #0c1020;
+  border: calc(0.4 * var(--u)) solid #232c4d;
+  border-radius: calc(0.8 * var(--u));
+}
+
+.player {
+  width: calc(2.4 * var(--u));
+  height: calc(2.4 * var(--u));
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #7ef0ff;
+  box-shadow: 0 0 calc(1.4 * var(--u)) rgba(126, 240, 255, 0.6);
+}
+
+.player.flash {
+  animation: hit-flash 0.5s ease-out;
+}
+
+@keyframes hit-flash {
+  0% {
+    background: #ff5d6c;
+    box-shadow: 0 0 calc(4 * var(--u)) rgba(255, 93, 108, 0.9);
+  }
+  100% {
+    background: #7ef0ff;
+    box-shadow: 0 0 calc(1.4 * var(--u)) rgba(126, 240, 255, 0.6);
+  }
+}
+
+.bullet {
+  width: calc(1.6 * var(--u));
+  height: calc(1.6 * var(--u));
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #ffb14d;
+  box-shadow: 0 0 calc(1 * var(--u)) rgba(255, 177, 77, 0.7);
+}
+
+.turret {
+  width: calc(5 * var(--u));
+  height: calc(5 * var(--u));
+  transform: translate(-50%, -50%);
+  background: #222b4c;
+  border: calc(0.35 * var(--u)) solid #55639a;
+  border-radius: 28%;
+  cursor: pointer;
+  transition:
+    filter 0.25s,
+    border-color 0.25s,
+    box-shadow 0.25s;
+}
+
+.turret .barrel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(3.6 * var(--u));
+  height: calc(1.3 * var(--u));
+  transform: translateY(-50%);
+  background: #55639a;
+  border-radius: 0 calc(0.4 * var(--u)) calc(0.4 * var(--u)) 0;
+}
+
+/* Frozen via unit.ticking = false: iced over, but still rendered. */
+.turret.frozen {
+  filter: saturate(0.25) brightness(1.5);
+  border-color: #9fd8ff;
+  box-shadow: 0 0 calc(1.6 * var(--u)) rgba(159, 216, 255, 0.5);
+}
+
+/* ── HUD (plain React, alive during pause) ──────────────────────────────── */
+
+.hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8d99b8;
+}
+
+.hud-stat b {
+  color: #dfe5f1;
+  font-size: 18px;
+  margin-left: 6px;
+}
+
+.hud-scale {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 999px;
+  border: 1px solid #333f66;
+  color: #8d99b8;
+}
+
+.hud-scale.slowmo {
+  color: #7ef0ff;
+  border-color: #7ef0ff;
+  text-shadow: 0 0 12px rgba(126, 240, 255, 0.8);
+}
+
+.hud-scale.paused {
+  color: #ffb14d;
+  border-color: #ffb14d;
+}
+
+.hud-help {
+  text-align: center;
+  padding: 14px;
+  font-size: 12px;
+  color: #616d8c;
+}
+
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(7, 9, 15, 0.55);
+  backdrop-filter: blur(4px);
+  text-align: center;
+}
+
+.pause-overlay h1 {
+  margin: 0;
+  font-size: 42px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #ffb14d;
+}
+
+.pause-overlay p {
+  max-width: 44ch;
+  margin: 0;
+  line-height: 1.6;
+  color: #8d99b8;
+}
+
+.pause-overlay code {
+  color: #dfe5f1;
+}
+
+.pause-overlay button {
+  margin-top: 10px;
+  padding: 10px 34px;
+  font: inherit;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #07090f;
+  background: #7ef0ff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pause-overlay button:hover {
+  background: #a9f5ff;
+}

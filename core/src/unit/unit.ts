@@ -1,4 +1,5 @@
 import { ObservableEvent, type Unsub } from "../primitives/observable-event.ts";
+import { ObservableValue } from "../primitives/observable-value.ts";
 import { Cooldown } from "./cooldown.ts";
 import type { Engine } from "../engine/engine.ts";
 
@@ -256,8 +257,9 @@ export class Unit<P extends UnitProps = UnitProps> {
 
   /**
    * Run `cb` once after `delay` seconds of fixed-tick time. Frozen while the
-   * unit is off-tree (timers advance only when the unit ticks); cancelled by
-   * `destroy`. Returns a cancel function.
+   * unit is off-tree or not `ticking` (timers advance only when the unit
+   * ticks) and while the engine is paused; cancelled by `destroy`. Returns a
+   * cancel function.
    */
   after(delay: number, cb: () => void): Unsub {
     return this._addTimer(delay, null, cb);
@@ -265,8 +267,8 @@ export class Unit<P extends UnitProps = UnitProps> {
 
   /**
    * Run `cb` every `interval` seconds of fixed-tick time, first fire after one
-   * full interval. Frozen while the unit is off-tree; cancelled by `destroy`.
-   * Returns a cancel function.
+   * full interval. Frozen while the unit is off-tree, not `ticking`, or the
+   * engine is paused; cancelled by `destroy`. Returns a cancel function.
    */
   every(interval: number, cb: () => void): Unsub {
     if (!(interval > 0)) throw new Error("every() needs a positive interval");
@@ -347,6 +349,24 @@ export class Unit<P extends UnitProps = UnitProps> {
   onDestroy(): void {}
 
   // ── Tick hooks (override in subclasses; driven by the Engine) ─────────────
+
+  /** Channel behind `ticking`. */
+  readonly ticking$ = new ObservableValue(true);
+
+  /**
+   * Whether the engine ticks this unit (default true). When false the unit is
+   * dormant: its `tick` and `deviceTick` are skipped and its timers and
+   * cooldowns freeze, exactly as if it were off-tree — but it stays live, so
+   * lifecycle (tree enter/exit, destroy), subscriptions, and rendering are
+   * untouched. Unit-only: descendants keep ticking on their own flags.
+   * Assignment fires `ticking$` (a renderer can grey out a frozen unit).
+   */
+  get ticking(): boolean {
+    return this.ticking$.get();
+  }
+  set ticking(v: boolean) {
+    this.ticking$.set(v);
+  }
 
   /** Fixed-step simulation logic. `dt` in seconds. */
   tick(_dt: number): void {}

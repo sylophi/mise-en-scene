@@ -42,6 +42,7 @@ itself; use plain units for managers, spawners, timers, and controllers.
 | `destroy()` | Removes from the tree and destroys the subtree bottom-up. Permanent. |
 | `engine` | The bound `Engine`. Typed non-null: every live unit has one. Reading it on a detached unit returns null at runtime; that is a caller bug (check `isLive` if unsure). |
 | `isLive`, `destroyed` | State queries. |
+| `ticking`, `ticking$` | Whether the engine ticks this unit (default true). When false the unit is dormant: `tick`/`deviceTick` skipped, timers and cooldowns frozen — but it stays live: lifecycle, subscriptions, and rendering are untouched. Unit-only: descendants keep ticking on their own flags. |
 | `onParentChanged` | `ObservableEvent<Unit \| null>`, fires after `parent` changes (attach, reparent, detach). |
 | `onDestroyed` | `ObservableEvent<void>`, fires once after destruction (children already destroyed, `onDestroy` already run). The hook for external lifetime cleanup, e.g. `u.onDestroyed.addListener(() => gsap.killTweensOf(u))`. |
 | `props` | The constructor props, retained verbatim (`protected`). Pass-through subclasses read `this.props.title` instead of copying fields; type it via the class generic: `class Sign extends Unit2D<SignProps>`. |
@@ -72,7 +73,8 @@ class FollowCamera extends Camera {
 
 **Timers.** Engine-driven on the fixed clock, so they work even in subclasses
 that override `tick` without calling super. They freeze while the unit is
-off-tree and are cancelled by `destroy`.
+off-tree or not `ticking` (and while the engine is paused) and are cancelled
+by `destroy`.
 
 - `after(delay, cb)`: one-shot. Returns a cancel function.
 - `every(interval, cb)`: repeating, first fire after one full interval.
@@ -279,8 +281,10 @@ engine.changeScene(Level());
 | `root` | The `Root` unit. |
 | `input` | The input manager (below). |
 | `activeCamera` | `Camera \| null` accessor backed by the `activeCamera$` channel renderers subscribe to. |
-| `time` | Total simulated seconds, advancing in fixed steps. |
-| `start()` / `stop()` / `running` | Loop control. |
+| `time` | Total simulated seconds, advancing in fixed steps (at the `timeScale` rate). |
+| `timeScale`, `timeScale$` | Rate of simulated time vs. real time: 1 realtime, 0.5 slow motion, 2 fast-forward, 0 pauses the fixed clock (`tick`, timers, camera smoothing, `time`) while `deviceTick` and renderers keep running. Steps thin out or bunch up; each step's `dt` is always `fixedStep`. Finite, >= 0. |
+| `paused` | Convenience view of `timeScale === 0`. Setting true remembers the current scale and sets 0; setting false restores it. No channel of its own: subscribe via `timeScale$`. |
+| `start()` / `stop()` / `running` | Loop control. Unlike `paused`, `stop()` halts *both* loops (no `deviceTick`, no input rollover). |
 | `changeScene(unit, { destroyPrevious? })` | Swaps the scene under root. Destroys the previous scene by default; pass `false` to detach it for reuse. Only manages scenes it mounted: units added directly under root (persistent managers, cameras) are left alone. |
 | `onUnitEnter` / `onUnitExit` | `ObservableEvent<Unit>`, fired as units enter (top-down) and leave (bottom-up) the live tree. |
 | `onUnitMoved` | Fired on same-engine reparents, which fire no enter/exit. Renderers refresh draw order from this. |
@@ -290,11 +294,22 @@ Options: `fixedStep` (default 1/60), `maxCatchUp` (default 5),
 `maxDeviceDt` (default 0.1), `autoStart` (default true).
 
 **Two loops.** The fixed loop runs `tick` via `setInterval` with an
-accumulator: it measures real elapsed time and runs catch-up steps when late,
-capped at `maxCatchUp` to avoid the spiral of death (excess backlog is
-dropped). The device loop runs `deviceTick` via `requestAnimationFrame` at
-the display rate; it pauses on hidden tabs, and `dt` is clamped to
-`maxDeviceDt` so the first frame after a long pause doesn't take a giant step.
+accumulator: it measures real elapsed time (scaled by `timeScale`) and runs
+catch-up steps when late, capped at `maxCatchUp` to avoid the spiral of death
+(excess backlog is dropped). Scaling feeds the accumulator, never the step,
+so simulation math sees a constant `dt` at any speed — and a pause accrues
+nothing, so resuming after 10 seconds runs one fresh step, not a catch-up
+burst. The device loop runs `deviceTick` via `requestAnimationFrame` at the
+display rate; it pauses on hidden tabs, and `dt` is clamped to `maxDeviceDt`
+so the first frame after a long pause doesn't take a giant step. Device `dt`
+is real time, never scaled: `deviceTick` is the "always alive" hook that
+keeps running while the game is paused (multiply by `engine.timeScale`
+yourself for visuals that should slow with the game). One caveat while
+paused: `justPressed`/`justReleased` roll over on the fixed clock, so poll
+`isDown` or use the input events from `deviceTick` during a pause.
+
+See [docs/design/time-control.md](../docs/design/time-control.md) for the
+full semantics table and the reasoning.
 
 ## `Input`
 
@@ -352,7 +367,8 @@ class Player extends Renderable {
 ```
 
 All built-in reactive fields come in these pairs: `position`/`position$`,
-`rotation`, `scale`, `width`, `height`, `z`, `activeCamera`, `pointer`. One
+`rotation`, `scale`, `width`, `height`, `z`, `activeCamera`, `timeScale`,
+`ticking`, `pointer`. One
 footgun to remember: reading `unit.hp` inside a React component never
 subscribes. Components must read through `useObservable(unit.hp$)`.
 
