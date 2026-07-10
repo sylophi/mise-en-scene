@@ -136,20 +136,40 @@ instant), everything else through `fetch()` with a full body read. It returns
 no asset objects on purpose — the browser cache is the asset store, and
 consumers just use the same url again.
 
-```tsx
-const { progress, done, errors } = usePreload(ASSET_URLS);
-if (!done) return <ProgressBar value={progress} />;
-```
-
 - `preload(urls, options?)` returns a task: `progress$` / `done$` / `errors$`
   (`ObservableValue`s a loading screen observes), `promise`, `total`,
-  `loaded`. `usePreload(urls)` is the hook form; tasks are cached per url
-  list, so remounting a loading screen never re-issues loads.
+  `loaded`.
 - **Failures don't abort the batch.** A failed url is recorded in `errors$`,
   still counts toward `progress$` (which always reaches 1), and `promise`
   *resolves* — never rejects — with `{ errors }`. Check `errors.length` if
   you want fail-fast.
 - `options.load` overrides the per-url loader (tests, custom asset types).
+
+There is no bundled loading hook, for the same reason there is no bundled
+tween system: orchestration is your app's business, and the task speaks
+protocols your tools already understand. In plain React, hoist the task to
+module scope (like the engine itself, it starts once, so StrictMode can't
+double-load) and observe its channels:
+
+```tsx
+const task = preload(ASSET_URLS);
+
+function Gate({ children }: { children: ReactNode }) {
+  const done = useObservable(task.done$);
+  const progress = useObservable(task.progress$);
+  return done ? children : <ProgressBar value={progress} />;
+}
+```
+
+Or hand the promise to a data library — React Query adds caching, retry, and
+eviction for free:
+
+```tsx
+useQuery({ queryKey: ["preload", ...urls], queryFn: () => preload(urls).promise });
+```
+
+Live progress still comes from `task.progress$` via `useObservable`; keep the
+task where both the query and the progress bar can reach it.
 
 ## Sprite animation
 

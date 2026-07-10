@@ -1,6 +1,4 @@
 import { ObservableValue } from "@mise/core";
-import { useMemo } from "react";
-import { useObservable } from "./use-observable.ts";
 
 /** One url that failed to load, with the error it failed with. */
 export interface PreloadError {
@@ -129,45 +127,4 @@ export function preload(
       return settled;
     },
   };
-}
-
-// One task per distinct url list, shared across components and StrictMode
-// double-invocations, so remounting a loading screen never re-issues loads.
-const taskCache = new Map<string, PreloadTask>();
-
-/**
- * React binding for {@link preload}: kick off (or join) the load of `urls`
- * and re-render as it advances. Tasks are cached per url list for the module
- * lifetime, so the hook is safe to mount repeatedly.
- *
- * ```tsx
- * const { progress, done } = usePreload(ASSET_URLS);
- * if (!done) return <ProgressBar value={progress} />;
- * ```
- */
-export function usePreload(
-  urls: readonly string[],
-  options?: PreloadOptions,
-): {
-  progress: number;
-  done: boolean;
-  errors: readonly PreloadError[];
-  task: PreloadTask;
-} {
-  const key = urls.join("\n");
-  const task = useMemo(() => {
-    let cached = taskCache.get(key);
-    if (!cached) {
-      cached = preload(urls, options);
-      taskCache.set(key, cached);
-    }
-    return cached;
-    // The url list is fully described by `key`; a changed `options` identity
-    // alone must not restart a cached load.
-    // oxlint-disable-next-line exhaustive-deps
-  }, [key]);
-  const progress = useObservable(task.progress$);
-  const done = useObservable(task.done$);
-  const errors = useObservable(task.errors$);
-  return { progress, done, errors, task };
 }

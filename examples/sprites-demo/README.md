@@ -1,6 +1,6 @@
 # sprites-demo
 
-A small playable demo of `@mise/react`'s asset preloading (`usePreload`) and
+A small playable demo of `@mise/react`'s asset preloading (`preload`) and
 engine-time sprite animation (`AnimatedSprite`):
 
 - a loading screen with a real progress bar (throttle your network in

@@ -9,7 +9,7 @@ progress, and an `AnimatedSprite` helper driven by engine time. Both live in
 ### API
 
 ```ts
-const task = preload(urls, options?); // imperative
+const task = preload(urls, options?);
 // task: {
 //   progress$: ObservableValue<number>   0..1, counts settled urls
 //   done$:     ObservableValue<boolean>
@@ -18,8 +18,6 @@ const task = preload(urls, options?); // imperative
 //   total:     number
 //   loaded:    number                    settled-so-far (getter)
 // }
-
-const { progress, done, errors, task } = usePreload(urls); // React
 ```
 
 - **Images** (`.png .jpg .jpeg .gif .webp .avif .svg`) load through
@@ -46,12 +44,22 @@ Alternative considered: fail the promise on first error (`Promise.all`
 semantics). Rejected — it makes the common case (ship anyway, log the error)
 harder and the rare case (abort the game) only marginally easier.
 
-### `usePreload` and StrictMode
+### No bundled React hook (decision)
 
-`usePreload` memoizes tasks in a module-level cache keyed by the url list, so
-StrictMode double-invocation, a remounting loading screen, or two components
-watching the same asset set share one task instead of re-issuing loads.
-Subscription is plain `useObservable` on the task's channels.
+An earlier draft shipped `usePreload(urls)`: a hook over a module-level task
+cache keyed by the url list. Review cut it — it was a tiny bespoke
+React Query (a loader cache with no eviction, retry, or invalidation) that
+the framework would then have to maintain, for a job data libraries already
+do well. Load orchestration is delegated to userland, matching the
+bring-your-own-tools stance on tweening:
+
+- plain React: hoist the task to module scope (starts once; StrictMode-safe)
+  and gate on `useObservable(task.done$)`;
+- React Query: `queryFn: () => preload(urls).promise`, which buys retry and
+  eviction for real.
+
+The reactive progress channel (`progress$`/`done$`/`errors$`) remains the
+value-add `preload` owns, and composes with either.
 
 ## Sprite animation
 

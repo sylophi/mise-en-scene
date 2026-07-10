@@ -1,6 +1,6 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { Camera, Engine, Vector } from "@mise/core";
-import { MiseProvider, useObservable, usePreload } from "@mise/react";
+import { MiseProvider, preload, useObservable } from "@mise/react";
 import { ASSET_URLS, HEART_URL } from "./assets.ts";
 import {
   COIN_TOTAL,
@@ -22,6 +22,10 @@ const camera = new Camera({
 });
 engine.root.addChild(camera);
 engine.activeCamera = camera;
+
+// Like the engine, the preload task is hoisted to module scope: it starts
+// once, so StrictMode double-mounts can't re-issue loads.
+const assets = preload(ASSET_URLS);
 
 const overlayStyle: CSSProperties = {
   position: "fixed",
@@ -111,18 +115,20 @@ function Hud(): ReactNode {
 }
 
 export function App(): ReactNode {
-  const { progress, done, errors } = usePreload(ASSET_URLS);
+  const progress = useObservable(assets.progress$);
+  const done = useObservable(assets.done$);
 
   // Mount the level once everything is warm, exactly once.
   const started = useRef(false);
   useEffect(() => {
     if (!done || started.current) return;
     started.current = true;
+    const errors = assets.errors$.get();
     if (errors.length > 0) {
       console.warn("some assets failed to preload:", errors);
     }
     engine.changeScene(buildLevel());
-  }, [done, errors]);
+  }, [done]);
 
   return (
     <MiseProvider engine={engine}>

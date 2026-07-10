@@ -9,7 +9,6 @@ export {
 } from "./renderable.ts";
 export {
   preload,
-  usePreload,
   type PreloadError,
   type PreloadOptions,
   type PreloadResult,

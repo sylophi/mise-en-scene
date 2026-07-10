@@ -21,8 +21,8 @@
 
 - **Tilemaps**: a `TileMap2D` that stamps renderables and merged static
   colliders from a grid, with Tiled (`.tmj`) import as the authoring path.
-- ~~**Asset preloading** (`@mise/react`)~~ — done: `preload([...urls])` /
-  `usePreload` with progress, per-url error policy (see react/README.md and
+- ~~**Asset preloading** (`@mise/react`)~~ — done: `preload([...urls])` with
+  reactive progress and a per-url error policy (see react/README.md and
   docs/design/assets-and-sprites.md).
 - ~~**Sprite animation helper** (`@mise/react`)~~ — done: `AnimatedSprite`
   component + `useSpriteAnimation` hook (sheet or multi-image, fps,

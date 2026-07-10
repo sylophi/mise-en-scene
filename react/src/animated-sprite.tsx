@@ -52,15 +52,13 @@ interface Grid {
 function useSheetGrid(sheet: SpriteSheetSpec | undefined): Grid | null {
   const src = sheet?.src;
   const { columns, rows, frameWidth, frameHeight } = sheet ?? {};
-  const explicit =
-    columns !== undefined && rows !== undefined ? { columns, rows } : null;
-  const hasExplicit = explicit !== null;
+  const explicit = columns !== undefined && rows !== undefined;
   const [measured, setMeasured] = useState<(Grid & { src: string }) | null>(
     null,
   );
 
   useEffect(() => {
-    if (!src || hasExplicit) return;
+    if (!src || explicit) return;
     if (frameWidth === undefined || frameHeight === undefined) return;
     let cancelled = false;
     const img = new Image();
@@ -80,9 +78,9 @@ function useSheetGrid(sheet: SpriteSheetSpec | undefined): Grid | null {
     return () => {
       cancelled = true;
     };
-  }, [src, hasExplicit, frameWidth, frameHeight]);
+  }, [src, explicit, frameWidth, frameHeight]);
 
-  if (explicit) return explicit;
+  if (explicit) return { columns, rows };
   return measured && measured.src === src ? measured : null;
 }
 
@@ -90,9 +88,9 @@ function resolveCells(
   frames: number | readonly number[] | undefined,
   cellCount: number,
 ): readonly number[] {
-  const count = typeof frames === "number" ? frames : cellCount;
-  if (frames !== undefined && typeof frames !== "number") return frames;
-  return Array.from({ length: Math.max(0, count) }, (_, i) => i);
+  if (typeof frames === "object") return frames; // an explicit index array
+  const count = Math.max(0, frames ?? cellCount);
+  return Array.from({ length: count }, (_, i) => i);
 }
 
 /**
