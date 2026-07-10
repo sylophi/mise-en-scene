@@ -70,9 +70,21 @@ collision state.
   dynamic bodies, which v1 does not have yet; characters integrate their own
   gravity (see the example).
 - `castRay(origin, direction, maxDistance?, opts?)`: closest-hit raycast.
-  Returns `{ unit, point, normal, distance }` or `null`. Options: `mask` to
-  filter by layer, `exclude` to skip a unit (usually the caster),
-  `includeAreas` to let rays hit sensors (default false).
+  Returns `{ unit, point, normal, distance }` or `null`.
+- `castShape(shape, origin, rotation, direction, maxDistance?, opts?)`:
+  closest-hit sweep of a `rect`/`circle`/`capsule`. Same result shape as
+  `castRay`, except `point` is the witness point — where the swept shape
+  first touches the hit collider, in world space — and `distance` is how far
+  the shape traveled (0 if it starts overlapping). The go-to ground check:
+  sweep the character's own shape downward.
+- `pointIntersections(point, opts?)`: every object containing a point (what
+  is under the cursor?). Returns units, deduplicated, unordered.
+- `intersectShape(shape, position, rotation?, opts?)`: every object
+  overlapping a shape placed there — one-shot overlap tests (explosion
+  radius, melee arc) without mounting a throwaway `Area2D`.
+- All queries share the same options: `mask` to filter by layer, `exclude`
+  to skip a unit (usually the caster), `includeAreas` to let the query hit
+  sensors (default false).
 - `world`: the raw Rapier `World`, for anything not wrapped.
 
 ### `CollisionObject2D extends Unit2D`
@@ -102,8 +114,36 @@ Drive it from `tick` with `moveAndSlide(velocity, dt)`: it slides along
 obstacles and slopes instead of stopping dead, and writes the result back to
 `position` (which fires `position$`, so rendering follows). `isOnFloor`
 reflects the last `moveAndSlide`. "Up" is -y, matching gravity down the
-screen. For autostep, snap-to-ground, or slope limits, configure the exposed
-`controller` directly.
+screen.
+
+Three presets are props *and* live accessors (all off/default until set):
+
+```ts
+mes(Player, {
+  autostep: 1.5,          // climb ledges up to 1.5 tall (stairs); or
+                          // { maxHeight, minWidth?, includeDynamic? }
+  snapToGround: 0.8,      // stick to the ground across drops up to 0.8
+  maxSlope: Math.PI / 3,  // steepest walkable slope (default 45°)
+}, [ ... ]);
+
+player.autostep = null;               // runtime updates are plain setters
+player.maxSlope = (50 * Math.PI) / 180;
+```
+
+- `autostep` climbs small ledges instead of stopping at them. A number is
+  shorthand for `{ maxHeight }`; `minWidth` (clear space needed on top)
+  defaults to half of `maxHeight`.
+- `snapToGround` keeps the character glued (and `isOnFloor` steady) down
+  stairs and slopes it would otherwise fly off. Rapier only snaps a move
+  that starts grounded and ends moving downward, so keep integrating
+  gravity while on the floor.
+- `maxSlope` is the walkable-floor angle in radians: shallower climbs,
+  steeper blocks (and slides under downward movement). It sets Rapier's
+  climb and slide angles together; split them via the raw `controller` if
+  you need hysteresis.
+
+Anything else the wrappers don't cover: configure the exposed `controller`
+directly.
 
 ### `Area2D extends CollisionObject2D`
 

@@ -6,6 +6,7 @@ import {
 } from "@dimforge/rapier2d-compat";
 import { Unit, Vector, type UnitProps } from "@mise/core";
 import { assertPhysicsReady } from "./init.ts";
+import { rapierShapeFor, type Shape } from "./shape.ts";
 import type { CollisionObject2D } from "./collision-object.ts";
 
 export interface PhysicsWorld2DProps extends UnitProps {
@@ -27,14 +28,33 @@ export interface RayHit {
   distance: number;
 }
 
-export interface RayCastOptions {
+export interface ShapeCastHit {
+  unit: CollisionObject2D;
+  /**
+   * The witness point: where the swept shape first touches the hit collider,
+   * in world space.
+   */
+  point: Vector;
+  /** The hit collider's surface normal at `point`, pointing back at the cast. */
+  normal: Vector;
+  /**
+   * Distance traveled by the shape before impact (0 if it starts overlapping).
+   * `origin + direction.normalize().scale(distance)` is where its center stops.
+   */
+  distance: number;
+}
+
+export interface QueryOptions {
   /** Only hit objects whose `layer` intersects this bitmask. Default all. */
   mask?: number;
-  /** An object the ray should pass through (typically the caster). */
+  /** An object the query should ignore (typically the caster). */
   exclude?: CollisionObject2D;
-  /** Whether the ray can hit `Area2D` sensors. Default false. */
+  /** Whether the query can hit `Area2D` sensors. Default false. */
   includeAreas?: boolean;
 }
+
+/** Alias of {@link QueryOptions}: all world queries share the same options. */
+export type RayCastOptions = QueryOptions;
 
 /**
  * Owns and steps a Rapier physics world. Bodies, areas, and shapes register
@@ -84,20 +104,16 @@ export class PhysicsWorld2D<
     origin: Vector,
     direction: Vector,
     maxDistance = Number.MAX_VALUE,
-    opts: RayCastOptions = {},
+    opts: QueryOptions = {},
   ): RayHit | null {
     const dir = direction.normalize();
     const ray = new Ray(origin, dir);
-    const groups =
-      opts.mask === undefined
-        ? undefined
-        : (0xffff << 16) | (opts.mask & 0xffff);
     const hit = this.world.castRayAndGetNormal(
       ray,
       maxDistance,
       true,
-      opts.includeAreas ? undefined : QueryFilterFlags.EXCLUDE_SENSORS,
-      groups,
+      this.filterFlags(opts),
+      this.filterGroups(opts),
       undefined,
       opts.exclude?.body ?? undefined,
     );
@@ -110,6 +126,113 @@ export class PhysicsWorld2D<
       normal: new Vector(hit.normal.x, hit.normal.y),
       distance: hit.timeOfImpact,
     };
+  }
+
+  /**
+   * Sweep a shape from `origin` along `direction` and return the closest hit,
+   * or `null`. The shape keeps `rotation` (radians) for the whole sweep;
+   * `direction` need not be normalized; `maxDistance` is in world units. A
+   * cast that starts overlapping something reports it at `distance` 0.
+   */
+  castShape(
+    shape: Shape,
+    origin: Vector,
+    rotation: number,
+    direction: Vector,
+    maxDistance = Number.MAX_VALUE,
+    opts: QueryOptions = {},
+  ): ShapeCastHit | null {
+    const hit = this.world.castShape(
+      origin,
+      rotation,
+      direction.normalize(),
+      rapierShapeFor(shape),
+      0, // register contact at touch, not at a proximity threshold
+      maxDistance,
+      true, // stop at penetration: initial overlaps hit at distance 0
+      this.filterFlags(opts),
+      this.filterGroups(opts),
+      undefined,
+      opts.exclude?.body ?? undefined,
+    );
+    if (!hit) return null;
+    const unit = this.byCollider.get(hit.collider.handle);
+    if (!unit) return null;
+    return {
+      unit,
+      // witness1 is the world-space contact point on the hit collider, and
+      // normal1 its world-space surface normal (witness2/normal2 are in the
+      // cast shape's local space).
+      point: new Vector(hit.witness1.x, hit.witness1.y),
+      normal: new Vector(hit.normal1.x, hit.normal1.y),
+      distance: hit.time_of_impact,
+    };
+  }
+
+  /**
+   * All objects containing `point`, deduplicated, in no particular order.
+   * Sensors are skipped unless `includeAreas`; `mask`/`exclude` filter as in
+   * {@link castRay}.
+   */
+  pointIntersections(
+    point: Vector,
+    opts: QueryOptions = {},
+  ): CollisionObject2D[] {
+    const found = new Set<CollisionObject2D>();
+    this.world.intersectionsWithPoint(
+      point,
+      (collider) => {
+        const unit = this.byCollider.get(collider.handle);
+        if (unit) found.add(unit);
+        return true;
+      },
+      this.filterFlags(opts),
+      this.filterGroups(opts),
+      undefined,
+      opts.exclude?.body ?? undefined,
+    );
+    return [...found];
+  }
+
+  /**
+   * All objects overlapping a shape placed at `position` with `rotation`
+   * (radians), deduplicated, in no particular order. The one-shot overlap
+   * test: explosion radii, melee arcs, spawn-clearance checks.
+   */
+  intersectShape(
+    shape: Shape,
+    position: Vector,
+    rotation = 0,
+    opts: QueryOptions = {},
+  ): CollisionObject2D[] {
+    const found = new Set<CollisionObject2D>();
+    this.world.intersectionsWithShape(
+      position,
+      rotation,
+      rapierShapeFor(shape),
+      (collider) => {
+        const unit = this.byCollider.get(collider.handle);
+        if (unit) found.add(unit);
+        return true;
+      },
+      this.filterFlags(opts),
+      this.filterGroups(opts),
+      undefined,
+      opts.exclude?.body ?? undefined,
+    );
+    return [...found];
+  }
+
+  /** Query-filter flags shared by every world query. */
+  private filterFlags(opts: QueryOptions): QueryFilterFlags | undefined {
+    return opts.includeAreas ? undefined : QueryFilterFlags.EXCLUDE_SENSORS;
+  }
+
+  /** `opts.mask` packed in Rapier's interaction-group format (query side all). */
+  private filterGroups(opts: QueryOptions): number | undefined {
+    return opts.mask === undefined
+      ? undefined
+      : (0xffff << 16) | (opts.mask & 0xffff);
   }
 
   override onDestroy(): void {
