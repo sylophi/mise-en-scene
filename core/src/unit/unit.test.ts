@@ -70,6 +70,14 @@ describe("Unit tree", () => {
     expect(inner.findAncestor(Zone)).toBe(outer); // self does not count
   });
 
+  it("throws when adding to or adding a destroyed unit", () => {
+    const log: string[] = [];
+    const dead = new T("dead", log);
+    dead.destroy();
+    expect(() => dead.addChild(new T("x", log))).toThrow(/destroyed/);
+    expect(() => new T("y", log).addChild(dead)).toThrow(/destroyed/);
+  });
+
   it("removeChild detaches without destroying", () => {
     const log: string[] = [];
     const a = new T("a", log);

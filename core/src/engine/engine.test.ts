@@ -134,6 +134,27 @@ describe("Engine.changeScene", () => {
     expect(e.root.children).toContain(sceneB);
   });
 
+  it("re-mounting the current scene is a no-op, not a destroy", () => {
+    const e = new Engine({ autoStart: false });
+    const scene = new Unit();
+    e.changeScene(scene);
+    e.changeScene(scene);
+    expect(scene.destroyed).toBe(false);
+    expect(scene.isLive).toBe(true);
+    expect(e.root.children).toEqual([scene]);
+  });
+
+  it("re-mounts the current scene if it was detached externally", () => {
+    const e = new Engine({ autoStart: false });
+    const scene = new Unit();
+    e.changeScene(scene);
+    e.root.removeChild(scene);
+    e.changeScene(scene);
+    expect(scene.destroyed).toBe(false);
+    expect(scene.isLive).toBe(true);
+    expect(e.root.children).toEqual([scene]);
+  });
+
   it("does not touch a previous scene that was detached externally", () => {
     const e = new Engine({ autoStart: false });
     const sceneA = new Unit();

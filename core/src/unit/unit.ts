@@ -138,6 +138,7 @@ export class Unit<P extends UnitProps = UnitProps> {
    * `onTreeEnter`/`onTreeExit` as it enters or leaves the live tree.
    */
   addChild(child: Unit): void {
+    if (this._destroyed) throw new Error("cannot add to a destroyed unit");
     if (child._destroyed) throw new Error("cannot add a destroyed unit");
     // Cycle guard: child must not be an ancestor of this (covers child === this).
     for (let p: Unit | null = this; p; p = p._parent) {
