@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { Engine } from "@mise/core";
+import type { Engine } from "@sylophi/mise-core";
 
 export const EngineContext = createContext<Engine | null>(null);
 

@@ -4,7 +4,7 @@ import {
   RigidBodyDesc,
   type ColliderDesc,
 } from "@dimforge/rapier2d-compat";
-import { ObservableEvent } from "@mise/core";
+import { ObservableEvent } from "@sylophi/mise-core";
 import {
   CollisionObject2D,
   type CollisionObject2DProps,

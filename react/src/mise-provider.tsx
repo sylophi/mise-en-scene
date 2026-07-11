@@ -1,4 +1,4 @@
-import type { Engine } from "@mise/core";
+import type { Engine } from "@sylophi/mise-core";
 import type { ReactNode } from "react";
 import { EngineContext } from "./context.ts";
 import { Compositor } from "./compositor.tsx";

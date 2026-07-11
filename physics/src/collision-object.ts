@@ -4,7 +4,7 @@ import type {
   RigidBody,
   RigidBodyDesc,
 } from "@dimforge/rapier2d-compat";
-import { Unit2D, Vector, type Unit, type Unit2DProps } from "@mise/core";
+import { Unit2D, Vector, type Unit, type Unit2DProps } from "@sylophi/mise-core";
 import { colliderDescFor, type Shape } from "./shape.ts";
 import { PhysicsWorld2D } from "./world.ts";
 

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { Engine, Unit, Vector, mes } from "@mise/core";
+import { Engine, Unit, Vector, mes } from "@sylophi/mise-core";
 import {
   Area2D,
   CharacterBody2D,

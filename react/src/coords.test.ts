@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Camera, Matrix2D, Vector } from "@mise/core";
+import { Camera, Matrix2D, Vector } from "@sylophi/mise-core";
 import {
   entityTransformCss,
   screenToWorld,

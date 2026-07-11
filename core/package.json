@@ -1,7 +1,8 @@
 {
-  "name": "@mise/core",
-  "version": "0.0.0",
+  "name": "@sylophi/mise-core",
+  "version": "0.0.1",
   "description": "Headless 2D game engine: scene tree, fixed/device loops, input, reactive state. No DOM, no dependencies.",
+  "license": "MIT",
   "type": "module",
   "main": "./src/index.ts",
   "module": "./src/index.ts",

@@ -1,7 +1,8 @@
 {
-  "name": "@mise/react",
-  "version": "0.0.0",
+  "name": "@sylophi/mise-react",
+  "version": "0.0.1",
   "description": "React DOM renderer for Mise en Scène: every entity is a React component. No canvas.",
+  "license": "MIT",
   "type": "module",
   "main": "./src/index.ts",
   "module": "./src/index.ts",
@@ -14,7 +15,7 @@
     "dist"
   ],
   "dependencies": {
-    "@mise/core": "workspace:*"
+    "@sylophi/mise-core": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18",

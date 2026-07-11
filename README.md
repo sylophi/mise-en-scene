@@ -56,9 +56,9 @@ createRoot(el).render(<MiseProvider engine={engine} />);
 
 | Package | What it is | Docs |
 | --- | --- | --- |
-| `@mise/core` | The headless engine. Pure TypeScript, zero dependencies. | [core/README.md](core/README.md) |
-| `@mise/react` | The React DOM renderer: compositor, hooks, input adapter. | [react/README.md](react/README.md) |
-| `@mise/physics` | Rapier-backed bodies, areas, shapes, raycasts. | [physics/README.md](physics/README.md) |
+| `@sylophi/mise-core` | The headless engine. Pure TypeScript, zero dependencies. | [core/README.md](core/README.md) |
+| `@sylophi/mise-react` | The React DOM renderer: compositor, hooks, input adapter. | [react/README.md](react/README.md) |
+| `@sylophi/mise-physics` | Rapier-backed bodies, areas, shapes, raycasts. | [physics/README.md](physics/README.md) |
 
-`@mise/react` and `@mise/physics` depend on `@mise/core` and not on each
+`@sylophi/mise-react` and `@sylophi/mise-physics` depend on `@sylophi/mise-core` and not on each
 other; `core` knows nothing about rendering or physics.

@@ -1,7 +1,8 @@
 {
-  "name": "@mise/physics",
-  "version": "0.0.0",
+  "name": "@sylophi/mise-physics",
+  "version": "0.0.1",
   "description": "Rapier-backed 2D physics for Mise en Scène: bodies, areas, shapes, and raycasts as units in the tree.",
+  "license": "MIT",
   "type": "module",
   "main": "./src/index.ts",
   "module": "./src/index.ts",
@@ -15,6 +16,6 @@
   ],
   "dependencies": {
     "@dimforge/rapier2d-compat": "^0.19.3",
-    "@mise/core": "workspace:*"
+    "@sylophi/mise-core": "workspace:*"
   }
 }

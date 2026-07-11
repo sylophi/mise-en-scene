@@ -1,4 +1,4 @@
-# @mise/physics
+# @sylophi/mise-physics
 
 Rapier-backed 2D physics for Mise en Scène. Bodies, areas, shapes, and the
 world itself are ordinary units: they enter the simulation when they enter
@@ -7,7 +7,7 @@ like everything else. Built on
 [Rapier](https://rapier.rs) (`@dimforge/rapier2d-compat`).
 
 ```ts
-import { initPhysics } from "@mise/physics";
+import { initPhysics } from "@sylophi/mise-physics";
 
 await initPhysics(); // loads the WASM module; once, before building scenes
 ```
@@ -15,11 +15,11 @@ await initPhysics(); // loads the WASM module; once, before building scenes
 ## A platformer in one scene
 
 ```tsx
-import { Engine, Vector, mes } from "@mise/core";
+import { Engine, Vector, mes } from "@sylophi/mise-core";
 import {
   CharacterBody2D, CollisionShape2D, PhysicsWorld2D, StaticBody2D,
   capsule, initPhysics, rect,
-} from "@mise/physics";
+} from "@sylophi/mise-physics";
 
 class Player extends CharacterBody2D {
   private vy = 0;
@@ -50,7 +50,7 @@ engine.changeScene(
 ```
 
 A body's appearance is whatever you make it: subclass `Renderable` from
-`@mise/react` *and* a physics class is not possible (single inheritance), so
+`@sylophi/mise-react` *and* a physics class is not possible (single inheritance), so
 either give the body a `Renderable` child, or subclass the physics class and
 let a sibling render it. The body is just a unit with a transform; anything
 that renders units works unchanged.

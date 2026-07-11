@@ -1,4 +1,4 @@
-import { Unit2D, type Unit2DProps, ObservableValue } from "@mise/core";
+import { Unit2D, type Unit2DProps, ObservableValue } from "@sylophi/mise-core";
 import type { ReactNode } from "react";
 
 /** A view function for a renderable. Receives the unit instance as its only prop. */

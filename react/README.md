@@ -1,13 +1,13 @@
-# @mise/react
+# @sylophi/mise-react
 
 The React DOM renderer for [Mise en Scène](../README.md). A retained-mode
 renderer that draws the engine's live tree as positioned HTML elements. No
-canvas. Depends on [`@mise/core`](../core/README.md); `core` never depends on
+canvas. Depends on [`@sylophi/mise-core`](../core/README.md); `core` never depends on
 this.
 
 ```tsx
-import { Engine, ObservableValue, Vector, mes } from "@mise/core";
-import { MiseProvider, Renderable, useObservable } from "@mise/react";
+import { Engine, ObservableValue, Vector, mes } from "@sylophi/mise-core";
+import { MiseProvider, Renderable, useObservable } from "@sylophi/mise-react";
 
 class Player extends Renderable {
   readonly hp$ = new ObservableValue(100);

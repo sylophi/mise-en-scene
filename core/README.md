@@ -1,8 +1,8 @@
-# @mise/core
+# @sylophi/mise-core
 
 The headless engine of [Mise en Scène](../README.md). Pure TypeScript, zero
 dependencies, no DOM. It owns the scene tree and the simulation; renderers
-(like [`@mise/react`](../react/README.md)) observe it and draw however they
+(like [`@sylophi/mise-react`](../react/README.md)) observe it and draw however they
 want.
 
 ## The model

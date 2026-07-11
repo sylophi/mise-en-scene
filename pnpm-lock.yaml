@@ -31,13 +31,13 @@ importers:
       '@dimforge/rapier2d-compat':
         specifier: ^0.19.3
         version: 0.19.3
-      '@mise/core':
+      '@sylophi/mise-core':
         specifier: workspace:*
         version: link:../core
 
   react:
     dependencies:
-      '@mise/core':
+      '@sylophi/mise-core':
         specifier: workspace:*
         version: link:../core
     devDependencies:

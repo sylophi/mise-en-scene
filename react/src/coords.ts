@@ -1,4 +1,4 @@
-import { Vector, type Camera, type Matrix2D } from "@mise/core";
+import { Vector, type Camera, type Matrix2D } from "@sylophi/mise-core";
 
 /**
  * CSS transform placing an entity wrapper at its world pose. The linear part

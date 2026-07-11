@@ -4,7 +4,7 @@ import {
   Ray,
   World,
 } from "@dimforge/rapier2d-compat";
-import { Unit, Vector, type UnitProps } from "@mise/core";
+import { Unit, Vector, type UnitProps } from "@sylophi/mise-core";
 import { assertPhysicsReady } from "./init.ts";
 import type { CollisionObject2D } from "./collision-object.ts";
 

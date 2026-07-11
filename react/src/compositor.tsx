@@ -15,7 +15,7 @@ import {
   type Camera,
   type Engine,
   type Matrix2D,
-} from "@mise/core";
+} from "@sylophi/mise-core";
 import { Renderable } from "./renderable.ts";
 import { useEngine } from "./context.ts";
 import { useObservable } from "./use-observable.ts";

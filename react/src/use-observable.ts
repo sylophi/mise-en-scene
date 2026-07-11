@@ -1,5 +1,5 @@
 import { useCallback, useSyncExternalStore } from "react";
-import type { ObservableValue } from "@mise/core";
+import type { ObservableValue } from "@sylophi/mise-core";
 
 /**
  * Subscribe a component to a single `ObservableValue` and return its current

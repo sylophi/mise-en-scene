@@ -9,7 +9,7 @@ import {
   Unit2D,
   Vector,
   mes,
-} from "@mise/core";
+} from "@sylophi/mise-core";
 import { MiseProvider } from "./mise-provider.tsx";
 import { Renderable } from "./renderable.ts";
 import { useObservable } from "./use-observable.ts";

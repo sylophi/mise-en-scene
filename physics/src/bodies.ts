@@ -3,7 +3,7 @@ import {
   RigidBodyDesc,
   type KinematicCharacterController,
 } from "@dimforge/rapier2d-compat";
-import { Unit2D, Vector, type Unit } from "@mise/core";
+import { Unit2D, Vector, type Unit } from "@sylophi/mise-core";
 import {
   CollisionObject2D,
   type CollisionObject2DProps,
