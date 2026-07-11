@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { Engine, Unit, Vector, mes } from "@sylophi/mise-core";
+import { Engine, Unit, Unit2D, Vector, mes } from "@sylophi/mise-core";
 import {
   Area2D,
   CharacterBody2D,
@@ -136,6 +136,93 @@ describe("castRay", () => {
       exclude: caster,
     });
     expect(short).toBeNull();
+  });
+});
+
+describe("reparenting", () => {
+  it("moves a live body into another world and simulates it there", () => {
+    const w = walker(new Vector(20, 0));
+    const worldA = mes(PhysicsWorld2D, {}, [w]);
+    const worldB = mes(PhysicsWorld2D, {}, [wall()]);
+    const e = engineWith(mes(Unit, {}, [worldA, worldB]));
+    steps(e, 5); // worldA is empty: the walker strolls freely
+
+    worldB.addChild(w);
+    expect(w.physicsWorld).toBe(worldB);
+    worldA.destroy(); // frees worldA's Rapier world; w must not live there
+    steps(e, 60);
+    expect(() => w.body!.translation()).not.toThrow(); // no use-after-free
+    expect(w.position.x).toBeGreaterThan(7.5); // stopped at worldB's wall
+    expect(w.position.x).toBeLessThan(8);
+  });
+
+  it("moves a plain subtree containing a body between worlds", () => {
+    const w = walker(new Vector(20, 0));
+    const group = mes(Unit2D, {}, [w]);
+    const worldA = mes(PhysicsWorld2D, {}, [group]);
+    const worldB = mes(PhysicsWorld2D, {}, [wall()]);
+    const e = engineWith(mes(Unit, {}, [worldA, worldB]));
+    steps(e, 5);
+
+    worldB.addChild(group); // the moved unit is not the physics unit itself
+    expect(w.physicsWorld).toBe(worldB);
+    worldA.destroy();
+    steps(e, 60);
+    expect(() => w.body!.translation()).not.toThrow();
+    expect(w.position.x).toBeGreaterThan(7.5);
+    expect(w.position.x).toBeLessThan(8);
+  });
+
+  it("keeps the same rigid body on a move within one world", () => {
+    const w = walker(Vector.zero);
+    const group = mes(Unit2D, {}, []);
+    const world = mes(PhysicsWorld2D, {}, [group, w]);
+    const e = engineWith(world);
+    steps(e, 1);
+
+    const body = w.body;
+    group.addChild(w);
+    expect(w.body).toBe(body); // same world: no rebuild
+    expect(w.physicsWorld).toBe(world);
+  });
+
+  it("throws on a move out from under every world, after tearing down", () => {
+    const w = walker(Vector.zero);
+    const worldA = mes(PhysicsWorld2D, {}, [w]);
+    const worldB = mes(PhysicsWorld2D, {}, []);
+    const scene = mes(Unit, {}, [worldA, worldB]);
+    const e = engineWith(scene);
+    steps(e, 1);
+
+    expect(() => scene.addChild(w)).toThrow(/descendant of a PhysicsWorld2D/);
+    expect(w.physicsWorld).toBeNull(); // torn down, not left in worldA
+    expect(w.body).toBeNull();
+    worldA.destroy();
+    steps(e, 1);
+
+    worldB.addChild(w); // recoverable: colliders come back with the body
+    expect(w.physicsWorld).toBe(worldB);
+    expect(w.colliders).toHaveLength(1);
+    steps(e, 1);
+  });
+
+  it("moves a shape between bodies", () => {
+    const shape = mes(CollisionShape2D, { shape: rect(2, 2) });
+    const bodyA = mes(StaticBody2D, { position: new Vector(10, 0) }, [shape]);
+    const bodyB = mes(StaticBody2D, { position: new Vector(0, 10) });
+    const world = mes(PhysicsWorld2D, {}, [bodyA, bodyB]);
+    const e = engineWith(world);
+    steps(e, 1);
+    expect(world.castRay(Vector.zero, new Vector(1, 0))!.unit).toBe(bodyA);
+
+    bodyB.addChild(shape);
+    expect(bodyA.colliders).toHaveLength(0);
+    expect(bodyB.colliders).toHaveLength(1);
+    steps(e, 1);
+    expect(world.castRay(Vector.zero, new Vector(1, 0))).toBeNull();
+    const hit = world.castRay(Vector.zero, new Vector(0, 1));
+    expect(hit!.unit).toBe(bodyB);
+    expect(hit!.distance).toBeCloseTo(9);
   });
 });
 
