@@ -42,12 +42,6 @@
 - **Structural equality option for `ObservableValue`** (v1 is `===`)
 - **Canvas/WebGL escape-hatch layer** (`@sylophi/mise-react`) for effects DOM is bad
   at (particles)
-- **Build/publish step** (currently consumed as TypeScript source)
 - **Multiple simultaneous scenes** (v1 `changeScene` swaps one child under
   root)
 - **Serialization of the live tree**
-
-## 6. Editor
-
-- **GUI editor**: author scenes, place units, and tune properties visually;
-  code is only for game logic. Built on live-tree serialization.
