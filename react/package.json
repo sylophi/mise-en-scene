@@ -3,6 +3,27 @@
   "version": "0.0.1",
   "description": "React DOM renderer for Mise en Scène: every entity is a React component. No canvas.",
   "license": "MIT",
+  "author": "sylophi",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sylophi/mise-en-scene.git",
+    "directory": "react"
+  },
+  "homepage": "https://github.com/sylophi/mise-en-scene/tree/main/react#readme",
+  "bugs": {
+    "url": "https://github.com/sylophi/mise-en-scene/issues"
+  },
+  "keywords": [
+    "react",
+    "renderer",
+    "game",
+    "dom",
+    "2d"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "type": "module",
   "main": "./src/index.ts",
   "module": "./src/index.ts",
@@ -31,14 +52,12 @@
       }
     }
   },
-  "dependencies": {
-    "@sylophi/mise-core": "workspace:*"
-  },
   "peerDependencies": {
-    "react": ">=18",
-    "react-dom": ">=18"
+    "@sylophi/mise-core": "workspace:^",
+    "react": ">=18"
   },
   "devDependencies": {
+    "@sylophi/mise-core": "workspace:^",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

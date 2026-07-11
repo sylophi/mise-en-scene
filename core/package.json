@@ -3,6 +3,28 @@
   "version": "0.0.1",
   "description": "Headless 2D game engine: scene tree, fixed/device loops, input, reactive state. No DOM, no dependencies.",
   "license": "MIT",
+  "author": "sylophi",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sylophi/mise-en-scene.git",
+    "directory": "core"
+  },
+  "homepage": "https://github.com/sylophi/mise-en-scene/tree/main/core#readme",
+  "bugs": {
+    "url": "https://github.com/sylophi/mise-en-scene/issues"
+  },
+  "keywords": [
+    "game-engine",
+    "2d",
+    "scene-tree",
+    "headless",
+    "typescript",
+    "reactive"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "type": "module",
   "main": "./src/index.ts",
   "module": "./src/index.ts",

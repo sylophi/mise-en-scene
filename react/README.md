@@ -1,8 +1,8 @@
 # @sylophi/mise-react
 
-The React DOM renderer for [Mise en Scène](../README.md). A retained-mode
+The React DOM renderer for [Mise en Scène](https://github.com/sylophi/mise-en-scene/blob/main/README.md). A retained-mode
 renderer that draws the engine's live tree as positioned HTML elements. No
-canvas. Depends on [`@sylophi/mise-core`](../core/README.md); `core` never depends on
+canvas. Depends on [`@sylophi/mise-core`](https://github.com/sylophi/mise-en-scene/blob/main/core/README.md); `core` never depends on
 this.
 
 ```tsx

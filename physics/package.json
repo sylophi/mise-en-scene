@@ -3,6 +3,26 @@
   "version": "0.0.1",
   "description": "Rapier-backed 2D physics for Mise en Scène: bodies, areas, shapes, and raycasts as units in the tree.",
   "license": "MIT",
+  "author": "sylophi",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sylophi/mise-en-scene.git",
+    "directory": "physics"
+  },
+  "homepage": "https://github.com/sylophi/mise-en-scene/tree/main/physics#readme",
+  "bugs": {
+    "url": "https://github.com/sylophi/mise-en-scene/issues"
+  },
+  "keywords": [
+    "rapier",
+    "physics",
+    "2d",
+    "game"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "type": "module",
   "main": "./src/index.ts",
   "module": "./src/index.ts",
@@ -32,7 +52,12 @@
     }
   },
   "dependencies": {
-    "@dimforge/rapier2d-compat": "^0.19.3",
-    "@sylophi/mise-core": "workspace:*"
+    "@dimforge/rapier2d-compat": "^0.19.3"
+  },
+  "peerDependencies": {
+    "@sylophi/mise-core": "workspace:^"
+  },
+  "devDependencies": {
+    "@sylophi/mise-core": "workspace:^"
   }
 }
