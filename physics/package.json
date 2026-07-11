@@ -11,9 +11,26 @@
     ".": "./src/index.ts"
   },
   "files": [
+    "dist",
     "src",
-    "dist"
+    "!src/**/*.test.*"
   ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm run build"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
   "dependencies": {
     "@dimforge/rapier2d-compat": "^0.19.3",
     "@sylophi/mise-core": "workspace:*"
