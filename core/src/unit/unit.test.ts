@@ -217,3 +217,161 @@ describe("engine binding & lifecycle", () => {
     expect(x.engine).toBe(e1);
   });
 });
+
+describe("hooks that mutate the tree mid-propagation", () => {
+  it("destroying self in onTreeExit does not recurse; exit fires once", () => {
+    const log: string[] = [];
+    const e = engine();
+    class SelfDestruct extends T {
+      override onTreeExit(): void {
+        super.onTreeExit();
+        this.destroy();
+      }
+    }
+    const parent = new T("p", log);
+    const u = new SelfDestruct("u", log);
+    parent.addChild(u);
+    e.root.addChild(parent);
+    log.length = 0;
+    e.root.removeChild(parent);
+    expect(log).toEqual(["exit:u", "destroy:u", "exit:p"]);
+    expect(u.destroyed).toBe(true);
+    expect(u.parent).toBeNull();
+    expect(u.isLive).toBe(false);
+  });
+
+  it("destroying an earlier sibling in onTreeEnter does not skip later siblings", () => {
+    const log: string[] = [];
+    const e = engine();
+    const a = new T("a", log);
+    class Assassin extends T {
+      override onTreeEnter(): void {
+        super.onTreeEnter();
+        a.destroy();
+      }
+    }
+    const parent = new T("p", log);
+    const b = new Assassin("b", log);
+    const c = new T("c", log);
+    parent.addChild(a);
+    parent.addChild(b);
+    parent.addChild(c);
+    e.root.addChild(parent);
+    expect(log).toEqual([
+      "enter:p",
+      "enter:a",
+      "enter:b",
+      "exit:a",
+      "destroy:a",
+      "enter:c", // was the bug: c skipped, live-parented but unbound
+    ]);
+    expect(a.destroyed).toBe(true);
+    expect(a.isLive).toBe(false);
+    expect(c.isLive).toBe(true);
+  });
+
+  it("a sibling destroyed before its turn in onTreeEnter never enters or announces", () => {
+    const log: string[] = [];
+    const e = engine();
+    const b = new T("b", log);
+    class Assassin extends T {
+      override onTreeEnter(): void {
+        super.onTreeEnter();
+        b.destroy();
+      }
+    }
+    const parent = new T("p", log);
+    const a = new Assassin("a", log);
+    const c = new T("c", log);
+    parent.addChild(a);
+    parent.addChild(b);
+    parent.addChild(c);
+    const entered: Unit[] = [];
+    e.onUnitEnter.addListener((u) => entered.push(u));
+    e.root.addChild(parent);
+    // b never entered, so no exit either: destroy is its only lifecycle event.
+    expect(log).toEqual(["enter:p", "enter:a", "destroy:b", "enter:c"]);
+    expect(b.destroyed).toBe(true);
+    expect(b.isLive).toBe(false);
+    expect(c.isLive).toBe(true);
+    expect(entered).not.toContain(b);
+    expect(entered).toContain(c);
+  });
+
+  it("destroying an earlier sibling in onTreeExit does not skip later siblings", () => {
+    const log: string[] = [];
+    const e = engine();
+    const a = new T("a", log);
+    class Assassin extends T {
+      override onTreeExit(): void {
+        super.onTreeExit();
+        a.destroy();
+      }
+    }
+    const parent = new T("p", log);
+    const b = new Assassin("b", log);
+    const c = new T("c", log);
+    parent.addChild(a);
+    parent.addChild(b);
+    parent.addChild(c);
+    e.root.addChild(parent);
+    log.length = 0;
+    e.root.removeChild(parent);
+    // a already exited before b's hook runs, so destroying it fires no exit.
+    expect(log).toEqual(["exit:a", "exit:b", "destroy:a", "exit:c", "exit:p"]);
+    expect(a.destroyed).toBe(true);
+    expect(a.parent).toBeNull();
+    expect(c.isLive).toBe(false); // was the bug: c skipped, detached but still bound
+    expect(c.parent).toBe(parent);
+  });
+
+  it("a sibling destroyed before its turn in onTreeExit still exits and unbinds", () => {
+    const log: string[] = [];
+    const e = engine();
+    const b = new T("b", log);
+    class Assassin extends T {
+      override onTreeExit(): void {
+        super.onTreeExit();
+        b.destroy();
+      }
+    }
+    const parent = new T("p", log);
+    const a = new Assassin("a", log);
+    const c = new T("c", log);
+    parent.addChild(a);
+    parent.addChild(b);
+    parent.addChild(c);
+    e.root.addChild(parent);
+    log.length = 0;
+    e.root.removeChild(parent);
+    expect(log).toEqual(["exit:a", "exit:b", "destroy:b", "exit:c", "exit:p"]);
+    expect(b.destroyed).toBe(true);
+    expect(b.isLive).toBe(false);
+    expect(c.isLive).toBe(false);
+    expect(c.parent).toBe(parent);
+  });
+
+  it("does not announce onUnitEnter for a unit destroyed by its own enter hook", () => {
+    const log: string[] = [];
+    const e = engine();
+    class Ephemeral extends T {
+      override onTreeEnter(): void {
+        super.onTreeEnter();
+        this.destroy();
+      }
+    }
+    const parent = new T("p", log);
+    const a = new Ephemeral("a", log);
+    const b = new T("b", log);
+    parent.addChild(a);
+    parent.addChild(b);
+    const entered: Unit[] = [];
+    e.onUnitEnter.addListener((u) => entered.push(u));
+    e.root.addChild(parent);
+    expect(entered).not.toContain(a);
+    expect(a.destroyed).toBe(true);
+    expect(a.isLive).toBe(false);
+    expect(b.isLive).toBe(true);
+    expect(entered).toContain(b);
+  });
+});
