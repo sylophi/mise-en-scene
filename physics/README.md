@@ -12,6 +12,11 @@ import { initPhysics } from "@sylophi/mise-physics";
 await initPhysics(); // loads the WASM module; once, before building scenes
 ```
 
+> **TypeScript note:** if your tsconfig uses `"moduleResolution": "node16"` or
+> `"nodenext"`, set `"skipLibCheck": true` — `@dimforge/rapier2d-compat`'s own
+> type packaging trips lib checks under those modes (a known upstream issue).
+> `"moduleResolution": "bundler"` is unaffected.
+
 ## A platformer in one scene
 
 ```tsx
