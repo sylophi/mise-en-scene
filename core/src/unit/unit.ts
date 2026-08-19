@@ -53,6 +53,10 @@ export class Unit<P extends UnitProps = UnitProps> {
   private readonly _children: Unit[] = [];
   protected _engine: Engine | null = null;
   private _destroyed = false;
+  // True while this unit's exit propagation is in flight. `_engine` must stay
+  // readable inside `onTreeExit` (hooks deregister via `this.engine`), so it
+  // cannot double as the reentrancy guard for exit.
+  private _exiting = false;
 
   constructor(props?: NoInfer<P>) {
     this.props = props ?? ({} as P);
@@ -134,6 +138,7 @@ export class Unit<P extends UnitProps = UnitProps> {
    * `onTreeEnter`/`onTreeExit` as it enters or leaves the live tree.
    */
   addChild(child: Unit): void {
+    if (this._destroyed) throw new Error("cannot add to a destroyed unit");
     if (child._destroyed) throw new Error("cannot add a destroyed unit");
     // Cycle guard: child must not be an ancestor of this (covers child === this).
     for (let p: Unit | null = this; p; p = p._parent) {
@@ -189,15 +194,34 @@ export class Unit<P extends UnitProps = UnitProps> {
       // Entering the live tree: bind + notify self, then descend.
       this._engine = engine;
       this.onTreeEnter(this._parent);
+      // The hook may destroy or detach this unit; an unbound unit is no
+      // longer entering, so don't announce it or descend.
+      if (this._engine !== engine) return;
       engine.onUnitEnter.fire(this);
-      for (const c of this._children) c.propagateEngine(engine);
+      if (this._engine !== engine) return; // a listener may do the same
+      // Snapshot: hooks may mutate the children array mid-propagation. A
+      // child that an earlier sibling's hook destroyed or reparented away
+      // no longer enters with this subtree.
+      for (const c of this._children.slice()) {
+        if (c._parent === this) c.propagateEngine(engine);
+      }
     } else {
       // Leaving: descend first (bottom-up), then notify + unbind self. The top
       // unit is already unlinked, so `exitParent` carries the parent it left.
-      for (const c of this._children) c.propagateEngine(null);
+      // A hook below may destroy/remove this very unit (which re-enters here
+      // via removeChild); that inner call must not fire exit a second time.
+      if (this._exiting) return;
+      this._exiting = true;
+      // Snapshot + membership check, as on enter: a hook may destroy a later
+      // sibling (it exits itself via removeChild) or reparent it elsewhere in
+      // the live tree (it must not exit at all).
+      for (const c of this._children.slice()) {
+        if (c._parent === this) c.propagateEngine(null);
+      }
       this.onTreeExit(exitParent);
       this._engine?.onUnitExit.fire(this);
       this._engine = null;
+      this._exiting = false;
     }
   }
 
@@ -209,6 +233,8 @@ export class Unit<P extends UnitProps = UnitProps> {
    */
   destroy(): void {
     if (this._destroyed) return;
+    // Mark first: a reentrant destroy from an exit hook below is a no-op.
+    this._destroyed = true;
 
     for (const c of this._children.slice()) c.destroy();
 
@@ -218,7 +244,6 @@ export class Unit<P extends UnitProps = UnitProps> {
       this.propagateEngine(null); // live root/unparented: unbind to fire exit
     }
 
-    this._destroyed = true;
     this.onDestroy();
     this._onDestroyed?.fire();
     this._onDestroyed = null;

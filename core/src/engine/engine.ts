@@ -102,12 +102,13 @@ export class Engine {
   changeScene(unit: Unit, opts: { destroyPrevious?: boolean } = {}): void {
     const destroyPrevious = opts.destroyPrevious ?? true;
     const prev = this.scene;
-    if (prev && prev.parent === this.root) {
+    // `prev !== unit`: re-mounting the current scene must not destroy it.
+    if (prev && prev !== unit && prev.parent === this.root) {
       if (destroyPrevious) prev.destroy();
       else this.root.removeChild(prev);
     }
     this.scene = unit;
-    this.root.addChild(unit);
+    this.root.addChild(unit); // no-op when it is already mounted
   }
 
   // ── Loop control ──────────────────────────────────────────────────────────
