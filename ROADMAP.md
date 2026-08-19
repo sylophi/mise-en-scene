@@ -31,8 +31,12 @@
 ## 4. Rounding out physics
 
 - **Contact events on bodies** (v1 events are sensor overlaps via `Area2D`)
-- **Shape casts and point queries** alongside `castRay`
-- **Character presets**: autostep, snap-to-ground, max slope as props
+- ~~**Shape casts and point queries** alongside `castRay`~~ — done:
+  `castShape`, `pointIntersections`, and `intersectShape` on `PhysicsWorld2D`
+  (see `docs/design/physics-queries.md`)
+- ~~**Character presets**: autostep, snap-to-ground, max slope as props~~ —
+  done: props and live accessors on `CharacterBody2D`, demoed in
+  `examples/character-lab`
 
 ## 5. Core ergonomics and later
 

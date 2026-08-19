@@ -1,4 +1,10 @@
-import { ColliderDesc } from "@dimforge/rapier2d-compat";
+import {
+  Ball,
+  Capsule,
+  ColliderDesc,
+  Cuboid,
+  type Shape as RapierShape,
+} from "@dimforge/rapier2d-compat";
 
 /**
  * A collision shape descriptor: plain data, in world units. Sizes are full
@@ -37,5 +43,17 @@ export function colliderDescFor(shape: Shape): ColliderDesc {
       return ColliderDesc.ball(shape.radius);
     case "capsule":
       return ColliderDesc.capsule(shape.halfHeight, shape.radius);
+  }
+}
+
+/** @internal Build a standalone Rapier shape (for world queries). */
+export function rapierShapeFor(shape: Shape): RapierShape {
+  switch (shape.kind) {
+    case "rect":
+      return new Cuboid(shape.width / 2, shape.height / 2);
+    case "circle":
+      return new Ball(shape.radius);
+    case "capsule":
+      return new Capsule(shape.halfHeight, shape.radius);
   }
 }
