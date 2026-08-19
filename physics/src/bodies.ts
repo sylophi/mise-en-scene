@@ -3,7 +3,7 @@ import {
   RigidBodyDesc,
   type KinematicCharacterController,
 } from "@dimforge/rapier2d-compat";
-import { Unit2D, Vector, type Unit } from "@sylophi/mise-core";
+import { Unit2D, Vector } from "@sylophi/mise-core";
 import {
   CollisionObject2D,
   type CollisionObject2DProps,
@@ -67,8 +67,8 @@ export class CharacterBody2D<
     return RigidBodyDesc.kinematicPositionBased();
   }
 
-  override onTreeEnter(parent: Unit | null): void {
-    super.onTreeEnter(parent);
+  protected override enterWorld(): void {
+    super.enterWorld();
     const controller = this.physicsWorld!.world.createCharacterController(
       this.offset,
     );
@@ -76,12 +76,12 @@ export class CharacterBody2D<
     this._controller = controller;
   }
 
-  override onTreeExit(parent: Unit | null): void {
+  protected override exitWorld(): void {
     if (this._controller) {
       this.physicsWorld?.world.removeCharacterController(this._controller);
       this._controller = null;
     }
-    super.onTreeExit(parent);
+    super.exitWorld();
   }
 
   /**
